@@ -1,11 +1,13 @@
 #ifndef __ptt_timestamp
 #define __ptt_timestamp
 
+#include <stdint.h>
+
 #if defined(__i386__)
 
-static unsigned long long ptt_getticks (void)
+static uint64_t ptt_getticks (void)
 {
-        unsigned long long ret;
+        uint64_t ret;
 
         asm volatile ("rdtsc" : "=A" (ret));
         return ret;
@@ -13,17 +15,17 @@ static unsigned long long ptt_getticks (void)
 
 #elif defined(__x86_64__)
 
-static inline unsigned long long ptt_getticks (void)
+static inline uint64_t ptt_getticks (void)
 {
         unsigned int a, d;
 
         asm volatile ("rdtsc" : "=a" (a), "=d" (d));
-        return (unsigned long long) d << 32 | a;
+        return (uint64_t) d << 32 | a;
 }
 
 #elif defined(__powerpc__) || defined(__ppc__)
 
-static inline unsigned long long ptt_getticks (void)
+static inline uint64_t ptt_getticks (void)
 {
         unsigned int tbl, tbu0, tbu1;
 
@@ -33,7 +35,7 @@ static inline unsigned long long ptt_getticks (void)
                 asm volatile ("mftbu %0" : "=r" (tbu1));
         } while (tbu0 != tbu1);
 
-        return (unsigned long long) tbu0 << 32 | tbl
+        return (uint64_t) tbu0 << 32 | tbl
 }
 
 #else
