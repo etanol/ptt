@@ -1,5 +1,3 @@
-#!/usr/bin/awk -f
-
 BEGIN {
     print "#ifndef __ptt_realpthread"
     print "#define __ptt_realpthread"
@@ -22,3 +20,4 @@ END {
     print ""
     print "#endif /* __ptt_realpthread */"
 }
+

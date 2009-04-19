@@ -1,5 +1,3 @@
-#!/usr/bin/awk -f
-
 BEGIN {
     print "EVENT_TYPE"
     print "0    70000003    Pthread function"
@@ -8,9 +6,7 @@ BEGIN {
 }
 
 
-{
-    print NR, "    ", $2
-}
+{ print NR, "    ", $2 }
 
 
 END {
