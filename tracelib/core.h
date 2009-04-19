@@ -3,16 +3,18 @@
 
 #include <stdint.h>
 
-#define PTT_BUFFER_SIZE  32
+#define PTT_BUFFER_SIZE     32
+#define PTT_ENDIAN_CHECK    0x33323130U
+#define PTT_REVERSE_ENDIAN  0x30313233U
 
 enum
 {
-        /* Reserved event types */
-        PTT_EVENT_ALIVE = 1,
+        /* Reserved event types.  Using these vales from the traced code will
+         * corrupt the resulting traces */
+        PTT_EVENT_RESERVED_BASE = 70000000,
+        PTT_EVENT_THREAD_ALIVE,
         PTT_EVENT_FLUSHING,
-
-        /* User event types base */
-        PTT_EVENT_USER = 99
+        PTT_EVENT_PTHREAD_FUNC
 };
 
 struct ptt_event
@@ -22,6 +24,7 @@ struct ptt_event
         int value;
 };
 
+/* Per thread information: basically id information and local buffers */
 struct ptt_threadinfo
 {
         int threadid;
@@ -29,15 +32,5 @@ struct ptt_threadinfo
         int eventcount;
         struct ptt_event events[PTT_BUFFER_SIZE];
 };
-
-
-/*
- * Function prototypes.
- */
-void ptt_init        (void) __attribute__((constructor));
-void ptt_fini        (void) __attribute__((destructor));
-void ptt_startthread (void);
-void ptt_endthread   (void *);
-void ptt_addevent    (int, int);
 
 #endif /* __ptt_core */
