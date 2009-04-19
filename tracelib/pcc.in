@@ -1,0 +1,6 @@
+#!/bin/sh
+
+wrap_args=@@@
+
+exec gcc -Wl,$wrap_args $* -pthread
+
