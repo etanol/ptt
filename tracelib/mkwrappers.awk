@@ -10,6 +10,7 @@ BEGIN {
 
     print "#include \"reals.h\""
     print "#include \"core.h\""
+    print "#include \"ptt.h\""
     print ""
     print ""
 }
