@@ -1,7 +1,7 @@
 #
 # Build rules for the tracing library
 #
-all: ptt.do pcc
+all: ptt.do ldargs.mk
 
 # Automatically generated sources
 reals.h: pthread.api mkreals.awk
@@ -12,6 +12,9 @@ function_event.pcf: pthread.api mkpcf.awk
 
 wrappers.c: pthread.api mkwrappers.awk
 	awk -f mkwrappers.awk pthread.api >$@
+
+ldargs.mk: pthread.api mkldargs.awk
+	awk -f mkldargs.awk pthread.api >$@
 
 
 # Library
@@ -31,14 +34,6 @@ wrappers.o wrappers.do: wrappers.c core.h ptt.h reals.h
 %.do: %.c
 	gcc -Wall -pipe -O0 -c -o $@ $<
 
-# Compiler wrapper
-pcc: pthread.api pcc.in mkpcc.awk
-	if : ; then \
-	    cat pthread.api && \
-	    echo '::@@::@@::' &&  \
-	    cat pcc.in ; \
-	fi | awk -f mkpcc.awk >$@ && chmod u+x $@
-
 
 # Cleaning
 .PHONY: clean distclean
@@ -47,5 +42,5 @@ clean:
 	-rm -f *.o *.do
 
 distclean: clean
-	-rm -f reals.h function_event.pcf wrappers.c pcc
+	-rm -f reals.h function_event.pcf wrappers.c ldargs.mk
 
