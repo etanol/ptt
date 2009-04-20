@@ -1,10 +1,9 @@
+TRPATH   := ../tracelib
 PROGRAMS := dotprod matmul prodcons
 
-CFLAGS := -Wall -pipe -O3 -pthread
+dotprod_SOURCES  := dotprod.c
+matmul_SOURCES   := matmul.c
+prodcons_SOURCES := prodcons.c
 
-MAKEFLAGS += -r
+include $(TRPATH)/rules.mk
 
-all: $(PROGRAMS)
-
-%: %.c
-	$(CC) $(CFLAGS) -o $@ $<

@@ -1,5 +1,5 @@
 BEGIN {
-    printf "LD_WRAP := -Wl"
+    printf "ld_wrap := -Wl"
 }
 
 
