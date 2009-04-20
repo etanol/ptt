@@ -210,7 +210,7 @@ void ptt_events (int count, ...)
         struct ptt_threadinfo *ti;
         int e, i, l, fc = 0;  /* fc ---> flush count */
         va_list eventlist;
-        uint64_t ts, fts;  /* fts ---> flush timestamp */
+        uint64_t ts, fts = 0;  /* fts ---> flush timestamp */
 
         ts = ptt_getticks();
         ti = __real_pthread_getspecific(Global.tlskey);
