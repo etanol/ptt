@@ -24,13 +24,31 @@ struct ptt_event
         int value;
 };
 
-/* Per thread information: basically id information and local buffers */
+/* Per thread information */
 struct ptt_threadinfo
 {
+        void *(*function)(void *);
+        void *parameter;
         int threadid;
         int tracefile;
         int eventcount;
         struct ptt_event events[PTT_BUFFER_SIZE];
 };
+
+
+#ifdef DEBUG
+#  define ptt_assert(condition) \
+   do { \
+           if (!(condition)) \
+                   fprintf(stderr, "(%s:%d) Assertion '" #condition "' failed.\n", \
+                           __FILE__, __LINE__); \
+   } while (0)
+#else
+#  define ptt_assert(condition)
+#endif
+
+
+/* Thread initializer, visibility required for the pthread_create wrapper */
+extern void *ptt_startthread (void *);
 
 #endif /* __ptt_core */

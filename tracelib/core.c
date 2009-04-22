@@ -14,22 +14,10 @@
 static struct
 {
         pthread_key_t tlskey;
-        pthread_mutex_t lock;
+        pthread_mutex_t idlock;
         int nextid;
         pid_t processid;
 } Global;
-
-
-#ifdef DEBUG
-#  define ptt_assert(condition) \
-   do { \
-           if (!(condition)) \
-                   fprintf(stderr, "(%s:%d) Assertion '" #condition "' failed.\n", \
-                           __FILE__, __LINE__); \
-   } while (0)
-#else
-#  define ptt_assert(condition)
-#endif
 
 
 /***************************  TRACE FILE CREATION  ***************************/
@@ -58,35 +46,36 @@ static int ptt_create_tracefile (pid_t pid, int tid)
 /**********************  PER-THREAD AUTOMATIC FUNCTIONS  **********************/
 
 /*
- * Prepare structures to trace the current thread.  This function is called
- * automatically each time a thread is spawn, before calling the user's code.
+ * Prepare structures to trace the current thread.  This proxy function is
+ * called from our speciala pthread_create wrapper.
  */
-static void ptt_startthread (void)
+void *ptt_startthread (void *threadinfo)
 {
-        struct ptt_threadinfo *ti;
-        int e, threadid;
+        struct ptt_threadinfo *ti = threadinfo;
+        int e;
 
-        e = __real_pthread_mutex_lock(&Global.lock);
+
+        e = __real_pthread_mutex_lock(&Global.idlock);
         ptt_assert(e == 0);
         /* Begin critical section */
-        threadid = Global.nextid;
+        ti->threadid = Global.nextid;
         Global.nextid++;
-        ti = malloc(sizeof(struct ptt_threadinfo));
-        ptt_assert(ti != NULL);
         /* End critical section */
-        e = __real_pthread_mutex_unlock(&Global.lock);
+        e = __real_pthread_mutex_unlock(&Global.idlock);
         ptt_assert(e == 0);
 
         e = __real_pthread_setspecific(Global.tlskey, ti);
         ptt_assert(e == 0);
 
-        ti->tracefile = ptt_create_tracefile(Global.processid, threadid);
+        ti->tracefile = ptt_create_tracefile(Global.processid, ti->threadid);
         ptt_assert(ti->tracefile != -1);
 
         ti->events[0].timestamp = ptt_getticks();
         ti->events[0].type = PTT_EVENT_THREAD_ALIVE;
         ti->events[0].value = 1;
         ti->eventcount = 1;
+
+        return ti->function != NULL ? ti->function(ti->parameter) : NULL;
 }
 
 
@@ -112,13 +101,7 @@ static void ptt_endthread (void *threadinfo)
         e = close(ti->tracefile);
         ptt_assert(e != -1);
 
-        e = __real_pthread_mutex_lock(&Global.lock);
-        ptt_assert(e == 0);
-        /* Begin critical section */
         free(ti);
-        /* End critical section */
-        e = __real_pthread_mutex_unlock(&Global.lock);
-        ptt_assert(e == 0);
 }
 
 
@@ -131,18 +114,19 @@ static void ptt_endthread (void *threadinfo)
  */
 static void __attribute__((constructor)) ptt_init (void)
 {
+        struct ptt_threadinfo *ti;
         int e;
 
         Global.processid = getpid();
         Global.nextid = 0;
-        __real_pthread_mutex_init(&Global.lock, NULL);
+        __real_pthread_mutex_init(&Global.idlock, NULL);
         e = __real_pthread_key_create(&Global.tlskey, ptt_endthread);
         ptt_assert(e == 0);
 
-        e = __real_pthread_atfork(NULL, NULL, ptt_startthread);
-        ptt_assert(e == 0);
-
-        ptt_startthread();
+        ti = malloc(sizeof(struct ptt_threadinfo));
+        ptt_assert(ti != NULL);
+        ti->function = NULL;
+        ptt_startthread(ti);
 }
 
 
@@ -155,8 +139,8 @@ static void __attribute__((destructor)) ptt_fini (void)
         void *ti;
 
         ti = __real_pthread_getspecific(Global.tlskey);
-        ptt_assert(ti != NULL);
-        ptt_endthread(ti);
+        if (ti != NULL)
+                ptt_endthread(ti);
 }
 
 

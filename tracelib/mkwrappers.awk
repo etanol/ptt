@@ -7,14 +7,18 @@ BEGIN {
     autoname[6] = "f_"
     autoname[7] = "g_"
     autoname[8] = "h_"
+    create_interceptor = 0
 
     print "#include \"reals.h\""
     print "#include \"core.h\""
     print "#include \"ptt.h\""
+    print "#include <stdlib.h>"
+    print "#include <stdio.h>"
     print ""
     print ""
 }
 
+$2 == "pthread_create" { create_interceptor = 1 }
 
 {
     rtype = $1
@@ -43,12 +47,22 @@ BEGIN {
 
     print rtype, "__wrap_" fname, "(" argproto ")"
     print "{"
+    if (create_interceptor)
+        print "        struct ptt_threadinfo *ti;"
     if (rtype != "void") {
         print "       ", rtype, "r_;"
         print ""
     }
     print "        ptt_event(PTT_EVENT_PTHREAD_FUNC,", fid ");"
-    if (rtype != "void")
+
+    if (create_interceptor) {
+        print "        ti = malloc(sizeof(struct ptt_threadinfo));"
+        print "        ptt_assert(ti != NULL);"
+        print "        ti->function = c_;"
+        print "        ti->parameter = d_;"
+        print "        r_ = __real_" fname "(a_, b_, ptt_startthread, ti);"
+        create_interceptor = 0
+    } else if (rtype != "void")
         print "        r_ = __real_" fname "(" argcall ");"
     else
         print "        __real_" fname "(" argcall ");"
