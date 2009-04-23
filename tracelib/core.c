@@ -118,7 +118,7 @@ static void __attribute__((constructor)) ptt_init (void)
         int e;
 
         Global.processid = getpid();
-        Global.nextid = 0;
+        Global.nextid = 1;
         __real_pthread_mutex_init(&Global.idlock, NULL);
         e = __real_pthread_key_create(&Global.tlskey, ptt_endthread);
         ptt_assert(e == 0);
