@@ -1,6 +1,7 @@
 #ifndef __ptt_core
 #define __ptt_core
 
+#include <sys/time.h>
 #include <stdint.h>
 
 #define PTT_BUFFER_SIZE     32
@@ -17,6 +18,17 @@ enum
         PTT_EVENT_PTHREAD_FUNC
 };
 
+/* Global trace information */
+struct ptt_traceinfo
+{
+        uint64_t endianness;
+        uint64_t startstamp;
+        uint64_t endstamp;
+        struct timeval starttime;
+        struct timeval endtime;
+};
+
+/* Single event */
 struct ptt_event
 {
         uint64_t timestamp;
@@ -36,6 +48,7 @@ struct ptt_threadinfo
 };
 
 
+/* Debug mode assertions, a tool for reporting system errors */
 #ifdef DEBUG
 #  define ptt_assert(condition) \
    do { \

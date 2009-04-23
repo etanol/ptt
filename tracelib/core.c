@@ -17,30 +17,10 @@ static struct
         pthread_mutex_t idlock;
         int nextid;
         pid_t processid;
+        char *nameprefix;
+        struct ptt_traceinfo info;
 } Global;
 
-
-/***************************  TRACE FILE CREATION  ***************************/
-
-/*
- * Create a single thread trace file, overriding the default prefix if a custom
- * one is present in the execution environment.
- */
-static int ptt_create_tracefile (pid_t pid, int tid)
-{
-        int fd;
-        char *prefix;
-        char filename[128];
-
-        prefix = getenv("PTT_TRACE_FILENAME");
-        if (prefix == NULL)
-                prefix = "ptt-trace";
-
-        snprintf(filename, 128, "%s-%d-%04d.tt", prefix, (int) pid, tid);
-        fd = creat(filename, S_IRUSR | S_IRGRP);
-        ptt_assert(fd != -1);
-        return fd;
-}
 
 
 /**********************  PER-THREAD AUTOMATIC FUNCTIONS  **********************/
@@ -67,8 +47,15 @@ void *ptt_startthread (void *threadinfo)
         e = __real_pthread_setspecific(Global.tlskey, ti);
         ptt_assert(e == 0);
 
-        ti->tracefile = ptt_create_tracefile(Global.processid, ti->threadid);
-        ptt_assert(ti->tracefile != -1);
+        /* Some extra variables to create the thread's trace file */
+        {
+                char filename[128];
+
+                snprintf(filename, 128, "%s-%d-%04d.tt", Global.nameprefix,
+                         (int) Global.processid, ti->threadid);
+                ti->tracefile = creat(filename, S_IRUSR | S_IRGRP);
+                ptt_assert(ti->tracefile != -1);
+        }
 
         ti->events[0].timestamp = ptt_getticks();
         ti->events[0].type = PTT_EVENT_THREAD_ALIVE;
@@ -119,8 +106,19 @@ static void __attribute__((constructor)) ptt_init (void)
 
         Global.processid = getpid();
         Global.nextid = 1;
+        Global.info.endianness = PTT_ENDIAN_CHECK;
+
         __real_pthread_mutex_init(&Global.idlock, NULL);
         e = __real_pthread_key_create(&Global.tlskey, ptt_endthread);
+        ptt_assert(e == 0);
+
+        Global.nameprefix = getenv("PTT_TRACE_NAME");
+        if (Global.nameprefix == NULL)
+                Global.nameprefix = "ptt-trace";
+
+        /* Mark the start of the trace globally */
+        e = gettimeofday(&Global.info.starttime, NULL);
+        Global.info.startstamp = ptt_getticks();
         ptt_assert(e == 0);
 
         ti = malloc(sizeof(struct ptt_threadinfo));
@@ -136,11 +134,28 @@ static void __attribute__((constructor)) ptt_init (void)
  */
 static void __attribute__((destructor)) ptt_fini (void)
 {
+        int e, fd;
         void *ti;
+        char filename[128];
 
         ti = __real_pthread_getspecific(Global.tlskey);
         if (ti != NULL)
                 ptt_endthread(ti);
+
+        /* Mark the end of the trace globally */
+        e = gettimeofday(&Global.info.endtime, NULL);
+        Global.info.endstamp = ptt_getticks();
+        ptt_assert(e == 0);
+
+        /* We need to create one more file to hold global trace information */
+        snprintf(filename, 128, "%s-%d.gtd", Global.nameprefix,
+                 (int) Global.processid);
+        fd = creat(filename, S_IRUSR | S_IRGRP);
+        ptt_assert(fd != -1);
+        e = write(fd, &Global.info, sizeof(struct ptt_traceinfo));
+        ptt_assert(e == sizeof(struct ptt_traceinfo));
+        e = close(fd);
+        ptt_assert(e == 0);
 }
 
 
