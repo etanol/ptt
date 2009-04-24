@@ -27,7 +27,7 @@ static struct
 
 /*
  * Prepare structures to trace the current thread.  This proxy function is
- * called from our speciala pthread_create wrapper.
+ * called from our special pthread_create wrapper.
  */
 void *ptt_startthread (void *threadinfo)
 {
