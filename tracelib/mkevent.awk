@@ -8,9 +8,3 @@ BEGIN {
 
 { print NR, "    ", $2 }
 
-
-END {
-    print ""
-    print ""
-}
-
