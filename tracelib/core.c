@@ -142,7 +142,8 @@ static void __attribute__((destructor)) ptt_fini (void)
         if (ti != NULL)
                 ptt_endthread(ti);
 
-        /* Mark the end of the trace globally */
+        /* Complete global trace information */
+        Global.info.threadcount = Global.nextid - 1;
         e = gettimeofday(&Global.info.endtime, NULL);
         Global.info.endstamp = ptt_getticks();
         ptt_assert(e == 0);

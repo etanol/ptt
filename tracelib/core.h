@@ -26,6 +26,7 @@ struct ptt_traceinfo
         uint64_t endstamp;
         struct timeval starttime;
         struct timeval endtime;
+        int threadcount;
 };
 
 /* Single event */
