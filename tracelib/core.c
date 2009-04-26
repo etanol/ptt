@@ -54,7 +54,7 @@ void *ptt_startthread (void *threadinfo)
 
                 snprintf(filename, 128, "%s-%04d.tt", Global.tracename,
                          ti->threadid);
-                ti->tracefile = creat(filename, S_IRUSR | S_IRGRP);
+                ti->tracefile = open(filename, O_CREAT | O_WRONLY, 00640);
                 ptt_assert(ti->tracefile != -1);
         }
 
@@ -161,7 +161,7 @@ static void __attribute__((destructor)) ptt_fini (void)
 
         /* We need to create one more file to hold global trace information */
         snprintf(filename, 128, "%s.gtd", Global.tracename);
-        fd = creat(filename, S_IRUSR | S_IRGRP);
+        fd = open(filename, O_CREAT | O_WRONLY, 00640);
         ptt_assert(fd != -1);
         e = write(fd, &Global.info, sizeof(struct ptt_traceinfo));
         ptt_assert(e == sizeof(struct ptt_traceinfo));
