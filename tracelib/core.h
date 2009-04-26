@@ -21,12 +21,11 @@ enum
 /* Global trace information */
 struct ptt_traceinfo
 {
-        uint64_t endianness;
+        int endianness;
+        int threadcount;
+        uint64_t duration;  /* Elapsed time in nanoseconds */
         uint64_t startstamp;
         uint64_t endstamp;
-        struct timeval starttime;
-        struct timeval endtime;
-        int threadcount;
 };
 
 /* Single event */

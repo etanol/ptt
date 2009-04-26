@@ -17,6 +17,7 @@ static struct
         pthread_mutex_t idlock;
         int nextid;
         struct ptt_traceinfo info;
+        struct timeval starttime;
         char tracename[128];
 } Global;
 
@@ -128,7 +129,7 @@ static void __attribute__((constructor)) ptt_init (void)
         Global.tracename[l - 4] = '\0';
 
         /* Mark the start of the trace globally */
-        e = gettimeofday(&Global.info.starttime, NULL);
+        e = gettimeofday(&Global.starttime, NULL);
         Global.info.startstamp = ptt_getticks();
         ptt_assert(e == 0);
 
@@ -147,6 +148,7 @@ static void __attribute__((destructor)) ptt_fini (void)
 {
         int e, fd;
         void *ti;
+        struct timeval endtime;
         char filename[128];
 
         ti = __real_pthread_getspecific(Global.tlskey);
@@ -155,9 +157,16 @@ static void __attribute__((destructor)) ptt_fini (void)
 
         /* Complete global trace information */
         Global.info.threadcount = Global.nextid - 1;
-        e = gettimeofday(&Global.info.endtime, NULL);
+        e = gettimeofday(&endtime, NULL);
         Global.info.endstamp = ptt_getticks();
         ptt_assert(e == 0);
+        /* Compute the duration in nanoseconds, respecting the sign */
+        Global.info.duration = (uint64_t) ((int64_t) (endtime.tv_sec -
+                                                      Global.starttime.tv_sec) *
+                                                      1000000LL +
+                                           (int64_t) (endtime.tv_usec -
+                                                      Global.starttime.tv_usec)
+                                          ) * 1000LL;
 
         /* We need to create one more file to hold global trace information */
         snprintf(filename, 128, "%s.gtd", Global.tracename);
