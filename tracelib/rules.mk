@@ -26,12 +26,12 @@ $(1)_DBG := $(patsubst %.c,%.dbo,$(filter %.c,$($(1)_SOURCES)))
 objects += $$($(1)_OBJ) $$($(1)_DBG)
 
 $(1): $$($(1)_OBJ) $(addprefix $(TRPATH)/,$(trace_objs))
-	@echo 'gcc -pipe -Wl,-O1,-s -o $$@ $$^ -wrap_pthread $(addprefix -l,$($(1)_LIBS))' ; \
-	gcc -pipe -Wl,-O1,-s $$(ld_wrap) -o $$@ $$^ -pthread $(addprefix -l,$($(1)_LIBS))
+	@echo 'gcc -pipe -Wl,-O1,-s -wrap_pthread -o $$@ $$^ $(addprefix -l,$($(1)_LIBS))' ; \
+	gcc -pipe -Wl,-O1,-s -pthread $$(ld_wrap) -o $$@ $$^ $(addprefix -l,$($(1)_LIBS))
 
 $(1).dbg: $$($(1)_DBG) $(addprefix $(TRPATH)/,$(trace_dbgs))
-	@echo 'gcc -pipe -g -o $$@ $$^ -wrap_pthread $(addprefix -l,$($(1)_LIBS))' ; \
-	gcc -pipe -g $$(ld_wrap) -o $$@ $$^ -pthread $(addprefix -l,$($(1)_LIBS))
+	@echo 'gcc -pipe -g -wrap_pthread -o $$@ $$^ $(addprefix -l,$($(1)_LIBS))' ; \
+	gcc -pipe -g -pthread $$(ld_wrap) -o $$@ $$^ $(addprefix -l,$($(1)_LIBS))
 
 $$($(1)_OBJ): $(filter %.h,$($(1)_SOURCES))
 $$($(1)_DBG): $(filter %.h,$($(1)_SOURCES))
@@ -58,10 +58,10 @@ $(foreach s,$(auto_sources),$(eval $(call gen_source_rules,$(s))))
 .SUFFIXES: .c .o .dbo
 
 %.o: %.c
-	gcc -Wall -pipe -I$(TRPATH) -O3 -fomit-frame-pointer -c -o $@ $<
+	gcc -Wall -pipe -I$(TRPATH) -D_REENTRANT -D_XOPEN_SOURCE=600 -O3 -fomit-frame-pointer -c -o $@ $<
 
 %.dbo: %.c
-	gcc -Wall -pipe -I$(TRPATH) -DDEBUG -O0 -g -c -o $@ $<
+	gcc -Wall -pipe -I$(TRPATH) -DDEBUG -D_REENTRANT -D_XOPEN_SOURCE=600 -O0 -g -c -o $@ $<
 
 
 # Tracing library specific dependencies
