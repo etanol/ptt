@@ -35,7 +35,7 @@ static inline uint64_t ptt_getticks (void)
                 asm volatile ("mftbu %0" : "=r" (tbu1));
         } while (tbu0 != tbu1);
 
-        return (uint64_t) tbu0 << 32 | tbl
+        return (uint64_t) tbu0 << 32 | tbl;
 }
 
 #else
