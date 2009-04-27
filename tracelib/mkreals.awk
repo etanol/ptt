@@ -7,6 +7,9 @@ BEGIN {
 }
 
 
+/^\/\// { next }
+
+
 {
     rtype = $1
     fname = $2

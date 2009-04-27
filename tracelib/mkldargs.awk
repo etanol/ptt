@@ -3,6 +3,9 @@ BEGIN {
 }
 
 
+/^\/\// { next }
+
+
 {
     printf ",--wrap,%s", $2
 }

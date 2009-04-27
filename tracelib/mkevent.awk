@@ -6,5 +6,8 @@ BEGIN {
 }
 
 
+/^\/\// { next }
+
+
 { print NR, "    ", $2 }
 

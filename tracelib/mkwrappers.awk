@@ -18,7 +18,12 @@ BEGIN {
     print ""
 }
 
+
+/^\/\// { next }
+
+
 $2 == "pthread_create" { create_interceptor = 1 }
+
 
 {
     rtype = $1
