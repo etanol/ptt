@@ -12,10 +12,17 @@ core          := core.o core.dbo
 core_deps     := core.c core.h timestamp.h reals.h
 wrappers      := wrappers.o wrappers.dbo
 wrappers_deps := wrappers.c core.h ptt.h reals.h
+postproc_deps := postprocessor.c core.h
 
+# Default and static rules
+all  : $(PROGRAMS) postprocessor
+debug: $(PROGRAMS:=.dbg) postprocessor.dbg
 
-all  : $(PROGRAMS)
-debug: $(PROGRAMS:=.dbg)
+postprocessor: $(addprefix $(TRPATH)/,$(postproc_deps))
+	gcc -Wall -pipe -I$(TRPATH) -O3 -Wl,-O1,-s -o $@ $<
+
+postprocessor.dbg: $(addprefix $(TRPATH)/,$(postproc_deps))
+	gcc -Wall -pipe -I$(TRPATH) -O0 -g -o $@ $<
 
 
 # Build rule generator
