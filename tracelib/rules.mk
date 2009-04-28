@@ -5,14 +5,14 @@
 MAKEFLAGS += -r
 
 # Library file listings
-auto_sources  := reals.h wrappers.c event.pcf ldargs.mk
+auto_sources  := reals.h wrappers.c event.h ldargs.mk
 trace_objs    := core.o wrappers.o
 trace_dbgs    := core.dbo wrappers.dbo
 core          := core.o core.dbo
 core_deps     := core.c core.h timestamp.h reals.h
 wrappers      := wrappers.o wrappers.dbo
 wrappers_deps := wrappers.c core.h ptt.h reals.h
-postproc_deps := postprocessor.c core.h
+postproc_deps := postprocessor.c core.h event.h
 
 # Default and static rules
 all  : $(PROGRAMS) postprocessor
@@ -84,5 +84,5 @@ clean:
 	-rm -f $(objects) $(PROGRAMS) $(PROGRAMS:=.dbg)
 
 distclean: clean
-	-rm -f $(addprefix $(TRPATH)/, $(trace_objs) $(trace_dbgs) $(auto_sources))
+	-rm -f $(addprefix $(TRPATH)/, $(trace_objs) $(trace_dbgs) $(auto_sources)) postprocessor postprocessor.dbg
 

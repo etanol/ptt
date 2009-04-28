@@ -12,6 +12,7 @@
 #include <time.h>
 
 #include "core.h"
+#include "event.h"
 
 struct threadtrace
 {
@@ -286,22 +287,43 @@ int main (int argc, char **argv)
         output = fopen(filename, "w");
         if (output == NULL)
                 error("Creating ROW file '%s'", filename);
-        fprintf(output, "LEVEL TASK            SIZE 1\n"
-                        "Main process\n"
-                        "LEVEL THREAD            SIZE %d\n", traceinfo.threadcount);
+
+        e = fprintf(output, "LEVEL TASK            SIZE 1\n"
+                            "Main process\n"
+                            "LEVEL THREAD            SIZE %d\n",
+                            traceinfo.threadcount);
+        if (e < 0)
+                error("Writing to ROW file '%s'", filename);
+
         for (ti = 1;  ti <= traceinfo.threadcount;  ti++)
         {
                 e = fprintf(output, "Thread %d\n", ti);
                 if (e < 0)
                         error("Writing to ROW file '%s'", filename);
         }
+
         e = fclose(output);
         if (e == EOF)
                 error("Closing ROW file '%s'", filename);
 
         /*
-         * For the moment, no PCF file is generated.
+         * The PCF file does not need anything special because the common part
+         * is already generated (event.h) and the rest is concatenated, if
+         * necessary.
+         *
+         * TODO: Concatenate the user part.
          */
+        snprintf(filename, 255, "%s.pcf", argv[1]);
+        output = fopen(filename, "w");
+        if (output == NULL)
+                error("Creating PCF file '%s'", filename);
+        e = fprintf(output, PTT_PCF);
+        if (e < 0)
+                error("Writing to PCF file '%s'", filename);
+        e = fclose(output);
+        if (e == EOF)
+                error("Closing PCF file '%s'", filename);
+
         return EXIT_SUCCESS;
 }
 
