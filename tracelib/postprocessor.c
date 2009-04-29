@@ -161,7 +161,7 @@ int main (int argc, char **argv)
          * thread traces.  In order to do that some space needs to be allocated
          * in advance.
          */
-        thread = malloc(traceinfo.threadcount * sizeof(struct threadtrace *));
+        thread = malloc(traceinfo.threadcount * sizeof(struct threadtrace));
         if (thread == NULL)
                 error("Allocating thread trace array");
 
