@@ -313,6 +313,7 @@ int main (int argc, char **argv)
          *
          * TODO: Concatenate the user part.
          */
+        printf("\tPCF file\n\n");
         snprintf(filename, 255, "%s.pcf", argv[1]);
         output = fopen(filename, "w");
         if (output == NULL)
