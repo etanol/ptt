@@ -129,8 +129,8 @@ static void __attribute__((constructor)) ptt_init (void)
         Global.tracename[l - 4] = '\0';
 
         /* Mark the start of the trace globally */
-        e = gettimeofday(&Global.starttime, NULL);
         Global.info.startstamp = ptt_getticks();
+        e = gettimeofday(&Global.starttime, NULL);
         ptt_assert(e == 0);
 
         ti = malloc(sizeof(struct ptt_threadinfo));
