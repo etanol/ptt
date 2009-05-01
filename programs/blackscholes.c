@@ -297,7 +297,7 @@ int main (int argc, char **argv)
         for (i = 0;  i < MAX_THREADS;  i++)
                 threadsTable[i] = -1;
 
-        pthread_barrier_init(&(barrier), NULL, numThreads);;
+        pthread_barrier_init(&barrier, NULL, numThreads);
         printf("Num of Options: %d\n", numOptions);
         printf("Num of Runs: %d\n", NUM_RUNS);
 
