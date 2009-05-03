@@ -1,3 +1,11 @@
+/*
+ * intestine.h - Common and private definitions for the tracing library
+ *
+ * Copyright 2009 Isaac Jurado Peinado <isaac.jurado@est.fib.upc.edu>
+ *
+ * This software may be used and distributed according to the terms of the GNU
+ * Lesser General Public License version 2.1, incorporated herein by reference.
+ */
 #ifndef __ptt_digestive
 #error "This file is private to the tracing implementation.  Include ptt.h instead"
 #endif

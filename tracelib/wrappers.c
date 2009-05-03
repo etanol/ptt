@@ -1,3 +1,11 @@
+/*
+ * wrappers.c - Link time interception of function calls
+ *
+ * Copyright 2009 Isaac Jurado Peinado <isaac.jurado@est.fib.upc.edu>
+ *
+ * This software may be used and distributed according to the terms of the GNU
+ * Lesser General Public License version 2.1, incorporated herein by reference.
+ */
 #define __ptt_digestive
 #include "intestine.h"
 #include <stdlib.h>
