@@ -1,4 +1,6 @@
-#include "core.h"
+#define __ptt_digestive
+#include "intestine.h"
+#include "timestamp.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -7,136 +9,42 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "timestamp.h"
-#include "reals.h"
 
 
-static struct
-{
-        pthread_key_t tlskey;
-        pthread_mutex_t idlock;
-        int nextid;
-        struct ptt_traceinfo info;
-        struct timeval starttime;
-        char tracename[128];
-} Global;
+/* Global variables instantiation */
+struct _PTT_GlobalScope PttGlobal;
 
-
-
-/**********************  PER-THREAD AUTOMATIC FUNCTIONS  **********************/
-
-/*
- * Prepare structures to trace the current thread.  This proxy function is
- * called from our special pthread_create wrapper.
- */
-void *ptt_startthread (void *threadinfo)
-{
-        struct ptt_threadinfo *ti = threadinfo;
-        int e;
-
-
-        e = __real_pthread_mutex_lock(&Global.idlock);
-        ptt_assert(e == 0);
-        /* Begin critical section */
-        ti->threadid = Global.nextid;
-        Global.nextid++;
-        /* End critical section */
-        e = __real_pthread_mutex_unlock(&Global.idlock);
-        ptt_assert(e == 0);
-
-        e = __real_pthread_setspecific(Global.tlskey, ti);
-        ptt_assert(e == 0);
-
-        /* Some extra variables to create the thread's trace file.  Declare them
-         * in a nested block so the stack space is released prior to calling the
-         * thread function */
-        {
-                char filename[128];
-
-                snprintf(filename, 128, "%s-%04d.tt", Global.tracename,
-                         ti->threadid);
-                ti->tracefile = open(filename, O_CREAT | O_WRONLY, 00640);
-                ptt_assert(ti->tracefile != -1);
-        }
-
-        ti->events[0].timestamp = ptt_getticks();
-        ti->events[0].type = PTT_EVENT_THREAD_ALIVE;
-        ti->events[0].value = 1;
-        ti->eventcount = 1;
-
-        return ti->function != NULL ? ti->function(ti->parameter) : NULL;
-}
-
-
-/*
- * Finalize thread tracing.  Mark final events, flush buffer, close trace files
- * and free memory.
- */
-static void ptt_endthread (void *threadinfo)
-{
-        struct ptt_threadinfo *ti = threadinfo;
-        int e, i;
-
-        i = ti->eventcount;
-        ti->eventcount++;
-
-        ti->events[i].timestamp = ptt_getticks();
-        ti->events[i].type = PTT_EVENT_THREAD_ALIVE;
-        ti->events[i].value = 0;
-
-        e = write(ti->tracefile, ti->events, ti->eventcount *
-                                             sizeof(struct ptt_event));
-        ptt_assert(e == ti->eventcount * sizeof(struct ptt_event));
-        e = close(ti->tracefile);
-        ptt_assert(e != -1);
-
-        free(ti);
-}
-
-
-
-/************************  GLOBAL AUTOMATIC FUNCTIONS  ************************/
 
 /*
  * Initialize tracing structures.  This function is called automatically before
  * main.
  */
-static void __attribute__((constructor)) ptt_init (void)
+void ptt_init (void)
 {
-        struct ptt_threadinfo *ti;
+        struct ptt_threadbuf *tb;
         char *prefix;
         int e, i, l;
 
-        Global.nextid = 1;
-        Global.info.endianness = PTT_ENDIAN_CHECK;
+#ifdef DEBUG
+        setlinebuf(stderr);
+#endif
+        PttGlobal.processid = getpid();
+        PttGlobal.threadcount = 0;
+        pthread_mutex_init(&PttGlobal.countlock, NULL);
 
-        __real_pthread_mutex_init(&Global.idlock, NULL);
-        e = __real_pthread_key_create(&Global.tlskey, ptt_endthread);
+        e = pthread_key_create(&PttGlobal.tlskey, ptt_endthread);
         ptt_assert(e == 0);
-
-        /* Generate a name for the trace that is available */
-        prefix = getenv("PTT_TRACE_NAME");
-        if (prefix == NULL)
-                prefix = "ptt-trace";
-        for (i = 1;  i < 1000;  i++)
-        {
-                l = snprintf(Global.tracename, 124, "%.115s-%03d.gtd", prefix, i);
-                e = access(Global.tracename, F_OK);
-                if (e == -1)
-                        break;
-        }
-        ptt_assert(i < 1000);
-        Global.tracename[l - 4] = '\0';
 
         /* Mark the start of the trace globally */
-        Global.info.startstamp = ptt_getticks();
-        e = gettimeofday(&Global.starttime, NULL);
-        ptt_assert(e == 0);
+        PttGlobal.startstamp = ptt_getticks();
+        gettimeofday(&PttGlobal.starttime, NULL);
 
-        ti = malloc(sizeof(struct ptt_threadinfo));
-        ptt_assert(ti != NULL);
-        ti->function = NULL;
-        ptt_startthread(ti);
+        tb = malloc(sizeof(struct ptt_threadbuf));
+        ptt_assert(tb != NULL);
+        tb->function = NULL;
+        tb->parameter = NULL;
+
+        ptt_startthread(tb);
 }
 
 
@@ -144,149 +52,108 @@ static void __attribute__((constructor)) ptt_init (void)
  * The main thread needs special treatment to make the ptt_endthread function be
  * called automatically in such case.
  */
-static void __attribute__((destructor)) ptt_fini (void)
+void ptt_fini (void)
 {
-        int e, fd;
-        void *ti;
-        struct timeval endtime;
-        char filename[128];
+        void *tb;
 
-        ti = __real_pthread_getspecific(Global.tlskey);
-        if (ti != NULL)
-                ptt_endthread(ti);
+        /* Finish the main thread manually */
+        tb = pthread_getspecific(PttGlobal.tlskey);
+        if (tb != NULL)
+                ptt_endthread(tb);
 
-        /* Complete global trace information */
-        Global.info.threadcount = Global.nextid - 1;
-        e = gettimeofday(&endtime, NULL);
-        Global.info.endstamp = ptt_getticks();
-        ptt_assert(e == 0);
-        /* Compute the duration in nanoseconds, respecting the sign */
-        Global.info.duration = (uint64_t) ((int64_t) (endtime.tv_sec -
-                                                      Global.starttime.tv_sec) *
-                                                      1000000LL +
-                                           (int64_t) (endtime.tv_usec -
-                                                      Global.starttime.tv_usec)
-                                          ) * 1000LL;
+        /* Mark the end of the trace globally */
+        gettimeofday(&PttGlobal.endtime, NULL);
+        PttGlobal.endstamp = ptt_getticks();
 
-        /* We need to create one more file to hold global trace information */
-        snprintf(filename, 128, "%s.gtd", Global.tracename);
-        fd = open(filename, O_CREAT | O_WRONLY, 00640);
-        ptt_assert(fd != -1);
-        e = write(fd, &Global.info, sizeof(struct ptt_traceinfo));
-        ptt_assert(e == sizeof(struct ptt_traceinfo));
-        e = close(fd);
-        ptt_assert(e == 0);
+        /* Perform post processing */
+        ptt_postprocess();
 }
 
 
+/*
+ * Prepare structures to trace the current thread.  This is a proxy function
+ * intended to intercept thread creation, configured from our special
+ * pthread_create wrapper.
+ */
+void *ptt_startthread (void *threadbuf)
+{
+        struct ptt_threadbuf *tb = threadbuf;
+        int e;
 
-/**************************  USER VISIBLE FUNCTIONS  **************************/
+
+        e = pthread_mutex_lock(&PttGlobal.countlock);
+        ptt_assert(e == 0);
+        /* Begin critical section */
+        tb->threadid = PttGlobal.threadcount;
+        PttGlobal.threadcount++;
+        /* End critical section */
+        e = pthread_mutex_unlock(&PttGlobal.countlock);
+        ptt_assert(e == 0);
+
+        e = pthread_setspecific(PttGlobal.tlskey, tb);
+        ptt_assert(e == 0);
+
+        /* Some extra variables to create the thread's trace file.  Declare them
+         * in a nested block so the stack space is released prior to calling the
+         * thread function */
+        {
+                char filename[32];
+
+                snprintf(filename, 31, "/tmp/ptt-%d-%04d.tt",
+                         PttGlobal.processid, tb->threadid + 1);
+                tb->tracefile = open(filename, O_CREAT | O_WRONLY, 00600);
+                ptt_assert(tb->tracefile != -1);
+        }
+
+        tb->events[0].timestamp = ptt_getticks();
+        tb->events[0].type = PTT_EVENT_THREAD_ALIVE;
+        tb->events[0].value = 1;
+        tb->eventcount = 1;
+
+        return tb->function != NULL ? tb->function(tb->parameter) : NULL;
+}
+
 
 /*
- * Mark an event of the given type and the given value; timestamp automatically
- * added.  Flush the event buffer if necessary.
+ * Finalize thread tracing.  Mark final events, flush buffer, close trace files
+ * and free memory.
  */
-void ptt_event (int type, int value)
+void ptt_endthread (void *threadbuf)
 {
-        struct ptt_threadinfo *ti;
+        struct ptt_threadbuf *tb = threadbuf;
         int e, i;
-        uint64_t ts, fts;  /* fts ---> flush timestamp */
 
-        ts = ptt_getticks();
-        ti = __real_pthread_getspecific(Global.tlskey);
-        ptt_assert(ti != NULL);
+        i = tb->eventcount;
+        tb->eventcount++;
 
-        i = ti->eventcount;
-        ti->eventcount++;
+        tb->events[i].timestamp = ptt_getticks();
+        tb->events[i].type = PTT_EVENT_THREAD_ALIVE;
+        tb->events[i].value = 0;
 
-        ti->events[i].timestamp = ts;
-        ti->events[i].type = type;
-        ti->events[i].value = value;
+        e = write(tb->tracefile, tb->events, tb->eventcount *
+                                             sizeof(struct ptt_event));
+        ptt_assert(e == tb->eventcount * sizeof(struct ptt_event));
+        e = close(tb->tracefile);
+        ptt_assert(e != -1);
 
-        if (ti->eventcount == PTT_BUFFER_SIZE)
-        {
-                fts = ptt_getticks();
-                e = write(ti->tracefile, ti->events, PTT_BUFFER_SIZE *
-                                                     sizeof(struct ptt_event));
-                ptt_assert(e == PTT_BUFFER_SIZE * sizeof(struct ptt_event));
-
-                ti->events[0].timestamp = fts;
-                ti->events[0].type = PTT_EVENT_FLUSHING;
-                ti->events[0].value = 1;
-                ti->events[1].timestamp = ptt_getticks();
-                ti->events[1].type = PTT_EVENT_FLUSHING;
-                ti->events[1].value = 0;
-                ti->eventcount = 2;
-        }
+        free(tb);
 }
 
 
+#ifdef DEBUG
 /*
- * Add multiple events using the same timestamp.
+ * Print a debug message with some additional decoration.  The "msg" string
+ * should not contain any ending period nor line ending codes.  This function is
+ * not intended to be called directly, use "ptt_debug" instead.
  */
-void ptt_events (int count, ...)
+void ptt_debugprint (const char *file, int line, const char *msg, ...)
 {
-        struct ptt_threadinfo *ti;
-        int e, i, l, fc = 0;  /* fc ---> flush count */
-        va_list eventlist;
-        uint64_t ts, fts = 0;  /* fts ---> flush timestamp */
+        va_list args;
 
-        ts = ptt_getticks();
-        ti = __real_pthread_getspecific(Global.tlskey);
-        ptt_assert(ti != NULL);
-
-        va_start(eventlist, count);
-        while (count > 0)
-        {
-                l = ti->eventcount + count;
-                if (l >= PTT_BUFFER_SIZE)
-                        l = PTT_BUFFER_SIZE;
-
-                for (i = ti->eventcount;  i < l;  i++)
-                {
-                        ti->events[i].timestamp = ts;
-                        ti->events[i].type = va_arg(eventlist, int);
-                        ti->events[i].value = va_arg(eventlist, int);
-                }
-                count -= l - ti->eventcount;
-                ti->eventcount = l;
-
-                if (i == PTT_BUFFER_SIZE)
-                {
-                        if (fc == 0)
-                                fts = ptt_getticks();
-                        fc++;
-                        e = write(ti->tracefile, ti->events, PTT_BUFFER_SIZE *
-                                                             sizeof(struct ptt_event));
-                        ptt_assert(e == PTT_BUFFER_SIZE * sizeof(struct ptt_event));
-                        ti->eventcount = 0;
-                }
-        }
-        va_end(eventlist);
-
-        /* If we performed any flush, add the corresponding events */
-        if (fc > 0)
-        {
-                /* Flush again if the two events do not fit in the buffer */
-                if (ti->eventcount + 2 >= PTT_BUFFER_SIZE)
-                {
-                        fc++;
-                        e = write(ti->tracefile, ti->events, ti->eventcount *
-                                                             sizeof(struct ptt_event));
-                        ptt_assert(e == ti->eventcount * sizeof(struct ptt_event));
-                        ti->eventcount = 0;
-                }
-
-                i = ti->eventcount;
-                ti->eventcount += 2;
-
-                ti->events[i].timestamp = fts;
-                ti->events[i].type = PTT_EVENT_FLUSHING;
-                ti->events[i].value = fc;
-                i++;
-                ti->events[i].timestamp = ptt_getticks();
-                ti->events[i].type = PTT_EVENT_FLUSHING;
-                ti->events[i].value = 0;
-        }
+        fprintf(stderr, "(%s:%d) DEBUG: ", file, line);
+        va_start(args, msg);
+        vfprintf(stderr, msg, args);
+        va_end(args);
+        fprintf(stderr, ".\n");
 }
-
+#endif

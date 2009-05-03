@@ -1,4 +1,4 @@
-TRPATH   := ../tracelib
+PTT_PATH := ../tracelib
 PROGRAMS := dotprod matmul prodcons blackscholes
 
 dotprod_SOURCES      := dotprod.c
@@ -8,5 +8,5 @@ blackscholes_SOURCES := blackscholes.c
 
 blackscholes_LIBS := m
 
-include $(TRPATH)/rules.mk
+include $(PTT_PATH)/rules.mk
 

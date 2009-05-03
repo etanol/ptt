@@ -1,5 +1,6 @@
-#ifndef __ptt_timestamp
-#define __ptt_timestamp
+#ifndef __ptt_digestive
+#  error "This file is private to the tracing implementation.  Include ptt.h instead"
+#endif
 
 #include <stdint.h>
 
@@ -39,7 +40,6 @@ static inline uint64_t ptt_getticks (void)
 }
 
 #else
-#error "There is no timestamp support for this environment"
+#  error "There is no timestamp support for this environment"
 #endif
 
-#endif /* __ptt_timestamp */

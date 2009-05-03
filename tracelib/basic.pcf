@@ -1,0 +1,29 @@
+DEFAULT_OPTIONS
+
+LEVEL               THREAD
+UNITS               NANOSEC
+LOOK_BACK           100
+SPEED               1
+FLAG_ICONS          DISABLED
+NUM_OF_STATE_COLORS 400
+YMAX_SCALE          100
+
+
+DEFAULT_SEMANTIC
+
+THREAD_FUNC          LastEvtValue
+
+
+EVENT_TYPE
+0    1    Thread state
+VALUES
+0      Dead
+1      Alive
+
+
+EVENT_TYPE
+0    2    Flushing trace buffer
+VALUES
+0      Finished
+
+

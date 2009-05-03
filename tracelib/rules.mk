@@ -4,85 +4,93 @@
 
 MAKEFLAGS += -r
 
-# Library file listings
-auto_sources  := reals.h wrappers.c event.h ldargs.mk
-trace_objs    := core.o wrappers.o
-trace_dbgs    := core.dbo wrappers.dbo
-core          := core.o core.dbo
-core_deps     := core.c core.h timestamp.h reals.h
-wrappers      := wrappers.o wrappers.dbo
-wrappers_deps := wrappers.c core.h ptt.h reals.h
-postproc_deps := postprocessor.c core.h event.h
+GCC           := gcc -pipe
+CFLAGS        ?= -O3 -fomit-frame-pointer
+CFLAGS_DBG    ?= -O0 -g
+LINKFLAGS     ?= -Wl,-O1,-s
+LINKFLAGS_DBG ?= -g
 
-# Default and static rules
-all  : $(PROGRAMS) postprocessor
-debug: $(PROGRAMS:=.dbg) postprocessor.dbg
+DEFS   := -D_REENTRANT -D_XOPEN_SOURCE=700
+LDWRAP := -Wl,--wrap,pthread_create
 
-postprocessor: $(addprefix $(TRPATH)/,$(postproc_deps))
-	gcc -Wall -pipe -I$(TRPATH) -O3 -Wl,-O1,-s -o $@ $<
 
-postprocessor.dbg: $(addprefix $(TRPATH)/,$(postproc_deps))
-	gcc -Wall -pipe -I$(TRPATH) -O0 -g -o $@ $<
+# Default and shortcut rules
+all   : traced
+traced: $(PROGRAMS)
+debug : $(PROGRAMS:=.debug)
 
+
+###########################  TRACING LIBRARY RULES  ###########################
+
+# File listings
+ptt_headers := ptt.h intestine.h timestamp.h
+ptt_sources := core.c event.c wrappers.c postprocess.c
+ptt_userapi := ptt.h
+ptt_object  := ptt.o
+ptt_debug   := ptt.go
+ptt_pcf     := basic.pcf
+
+# Prepend proper path to all files
+vars := headers sources userapi object debug pcf strizer
+$(foreach v,$(vars),$(eval ptt_$(v) := $(addprefix $(PTT_PATH)/,$(ptt_$(v)))))
+
+# Build rules
+$(ptt_object): $(ptt_sources:.c=.o)
+	ld -i -o $@ $^
+
+$(ptt_debug): $(ptt_sources:.c=.go)
+	ld -i -o $@ $^
+
+$(ptt_sources:.c=.o): %.o: %.c $(ptt_headers)
+	$(GCC) $(DEFS) $(CFLAGS) -c -o $@ $<
+
+$(ptt_sources:.c=.go): %.go: %.c $(ptt_headers)
+	$(GCC) -DDEBUG $(DEFS) $(CFLAGS_DBG) -c -o $@ $<
+
+# AWK code to stringize the PCF
+ptt_stringize := BEGIN { print "const char *PttPCF = " } \
+                       { print "\"" $$$$0 "\\n\"" } \
+                 END   { print ";" }
+
+
+############################  USER PROGRAMS RULES  ############################
 
 # Build rule generator
 define gen_build_rules
 $(1)_OBJ := $(patsubst %.c,%.o,$(filter %.c,$($(1)_SOURCES)))
-$(1)_DBG := $(patsubst %.c,%.dbo,$(filter %.c,$($(1)_SOURCES)))
+$(1)_DBG := $(patsubst %.c,%.go,$(filter %.c,$($(1)_SOURCES)))
 
 objects += $$($(1)_OBJ) $$($(1)_DBG)
+headers += pcf_$(1).h
 
-$(1): $$($(1)_OBJ) $(addprefix $(TRPATH)/,$(trace_objs))
-	@echo 'gcc -pipe -Wl,-O1,-s -wrap_pthread -o $$@ $$^ $(addprefix -l,$($(1)_LIBS))' ; \
-	gcc -pipe -Wl,-O1,-s -pthread $$(ld_wrap) -o $$@ $$^ $(addprefix -l,$($(1)_LIBS))
+$(1): $$($(1)_OBJ) $(ptt_object)
+	$(GCC) $(LDWRAP) $(LINKFLAGS) -o $$@ $$^ -pthread $(addprefix -l,$($(1)_LIBS))
 
-$(1).dbg: $$($(1)_DBG) $(addprefix $(TRPATH)/,$(trace_dbgs))
-	@echo 'gcc -pipe -g -wrap_pthread -o $$@ $$^ $(addprefix -l,$($(1)_LIBS))' ; \
-	gcc -pipe -g -pthread $$(ld_wrap) -o $$@ $$^ $(addprefix -l,$($(1)_LIBS))
+$(1).debug: $$($(1)_DBG) $(ptt_debug)
+	$(GCC) $(LDWRAP) $(LINKFLAGS_DBG) -o $$@ $$^ -pthread $(addprefix -l,$($(1)_LIBS))
 
-$$($(1)_OBJ): $(filter %.h,$($(1)_SOURCES))
-$$($(1)_DBG): $(filter %.h,$($(1)_SOURCES))
+$$($(1)_OBJ): %.o: %.c $(filter %.h,$($(1)_SOURCES)) pcf_$(1).h
+	$(GCC) $(DEFS) -include $(ptt_userapi) -include pcf_$(1).h $(CFLAGS) -c -o $$@ $$<
+
+$$($(1)_DBG): %.go: %.c $(filter %.h,$($(1)_SOURCES)) pcf_$(1).h
+	$(GCC) $(DEFS) -include $(ptt_userapi) -include pcf_$(1).h $(CFLAGS_DBG) -c -o $$@ $$<
+
+pcf_$(1).h: $(ptt_pcf) $(PCF_FILES) $$($(1)_PCF)
+	awk '$(ptt_stringize)' $$^ >$$@
 endef
-
-
-# Source rule generator
-define gen_source_rules
-$(TRPATH)/$(1): $(TRPATH)/pthread.api $(TRPATH)/mk$(basename $(1)).awk
-	awk -f $(TRPATH)/mk$(basename $(1)).awk $(TRPATH)/pthread.api >$$@
-endef
-
 
 # Perform rule generation
 $(foreach p,$(PROGRAMS),$(eval $(call gen_build_rules,$(p))))
-$(foreach s,$(auto_sources),$(eval $(call gen_source_rules,$(s))))
 
 
-# Include generated Makefile or force its generation.
--include $(TRPATH)/ldargs.mk
-
-
-# Pattern rules
-.SUFFIXES: .c .o .dbo
-
-%.o: %.c
-	gcc -Wall -pipe -I$(TRPATH) -D_REENTRANT -D_XOPEN_SOURCE=600 -O3 -fomit-frame-pointer -c -o $@ $<
-
-%.dbo: %.c
-	gcc -Wall -pipe -I$(TRPATH) -DDEBUG -D_REENTRANT -D_XOPEN_SOURCE=600 -O0 -g -c -o $@ $<
-
-
-# Tracing library specific dependencies
-$(addprefix $(TRPATH)/,$(core)): $(addprefix $(TRPATH)/,$(core_deps))
-
-$(addprefix $(TRPATH)/,$(wrappers)): $(addprefix $(TRPATH)/,$(wrappers_deps))
-
+################################  COMMON RULES  ################################
 
 # Cleaning
 .PHONY: clean distclean
 
 clean:
-	-rm -f $(objects) $(PROGRAMS) $(PROGRAMS:=.dbg)
+	-rm -f $(objects) $(PROGRAMS) $(PROGRAMS:=.debug)
 
 distclean: clean
-	-rm -f $(addprefix $(TRPATH)/, $(trace_objs) $(trace_dbgs) $(auto_sources)) postprocessor postprocessor.dbg
+	-rm -f $(headers) $(ptt_sources:.c=.o) $(ptt_sources:.c=.go) $(ptt_object) $(ptt_debug)
 
