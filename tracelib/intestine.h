@@ -20,6 +20,9 @@
 #define PTT_EVENT_THREAD_ALIVE  1
 #define PTT_EVENT_FLUSHING      2
 
+/*
+ * Single event, as simple as it gets.
+ */
 struct ptt_event
 {
         uint64_t timestamp;
@@ -27,6 +30,13 @@ struct ptt_event
         int value;
 };
 
+/*
+ * Per thread tracing information.  Essentially the thread's event buffer and
+ * additional related fields to control disk flushing of that buffer.
+ *
+ * The "function" and "parameter" fields are included here but are only used
+ * once by the thread creation interception mechanism.
+ */
 struct ptt_threadbuf
 {
         void *(*function)(void *);
@@ -37,7 +47,13 @@ struct ptt_threadbuf
         struct ptt_event events[PTT_BUFFER_SIZE];
 };
 
-/* Tracing global variables */
+
+/*
+ * Global variables needed for tracing.  This trick improves readability
+ * thorough the rest of the code as all these globals are prefixed in order to
+ * be accessed as such.  It also reduces the amount of exported symbols, thus
+ * reducing the probability of link time symbol clashes.
+ */
 struct _PTT_GlobalScope
 {
         pthread_key_t tlskey;
@@ -50,6 +66,7 @@ struct _PTT_GlobalScope
         struct timeval starttime;
         struct timeval endtime;
 };
+
 extern struct _PTT_GlobalScope PttGlobal;
 
 

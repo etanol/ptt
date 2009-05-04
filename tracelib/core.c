@@ -10,6 +10,17 @@
 #include "intestine.h"
 #include "timestamp.h"
 
+/*
+ * Automatic functions to setup and release the tracing infrastructure.  In most
+ * of the cases, the mechanism used to generate automatic calls to functions is
+ * simple and trivial.
+ *
+ * The only exception is the ptt_startthread() function, in which case it needs
+ * to be called from the newly created thread.  Therefore a mechanism to
+ * intercept pthread_create() calls is needed.  Comments in the file
+ * "wrappers.c" contain further details about this technique.
+ */
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -36,6 +47,7 @@ void ptt_init (void)
 #ifdef DEBUG
         setlinebuf(stderr);
 #endif
+        /* Create/initialize global state */
         PttGlobal.processid = getpid();
         PttGlobal.threadcount = 0;
         pthread_mutex_init(&PttGlobal.countlock, NULL);
@@ -47,24 +59,26 @@ void ptt_init (void)
         PttGlobal.startstamp = ptt_getticks();
         gettimeofday(&PttGlobal.starttime, NULL);
 
+        /* Initialize the main thread manually because no pthread_create() call
+         * could be intercepted yet */
         tb = malloc(sizeof(struct ptt_threadbuf));
         ptt_assert(tb != NULL);
         tb->function = NULL;
         tb->parameter = NULL;
-
         ptt_startthread(tb);
 }
 
 
 /*
- * The main thread needs special treatment to make the ptt_endthread function be
- * called automatically in such case.
+ * Finalize tracing structures.  This function is called automatically upon
+ * process exit.
  */
 void ptt_fini (void)
 {
         void *tb;
 
-        /* Finish the main thread manually */
+        /* Finish the main thread manually, as the key destructor is not called
+         * automatically in this case */
         tb = pthread_getspecific(PttGlobal.tlskey);
         if (tb != NULL)
                 ptt_endthread(tb);
@@ -87,7 +101,6 @@ void *ptt_startthread (void *threadbuf)
 {
         struct ptt_threadbuf *tb = threadbuf;
         int e;
-
 
         e = pthread_mutex_lock(&PttGlobal.countlock);
         ptt_assert(e == 0);
@@ -133,11 +146,11 @@ void ptt_endthread (void *threadbuf)
 
         i = tb->eventcount;
         tb->eventcount++;
-
         tb->events[i].timestamp = ptt_getticks();
         tb->events[i].type = PTT_EVENT_THREAD_ALIVE;
         tb->events[i].value = 0;
 
+        /* Final trace flush, not traced like the previous ones */
         e = write(tb->tracefile, tb->events, tb->eventcount *
                                              sizeof(struct ptt_event));
         ptt_assert(e == tb->eventcount * sizeof(struct ptt_event));

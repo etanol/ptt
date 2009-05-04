@@ -10,6 +10,46 @@
 #include "intestine.h"
 #include "timestamp.h"
 
+/*
+ * These functions are the only functions the user needs to introduce in his/her
+ * code in order to instrument it at the source code level.  Timestamps are
+ * caught as soon as possible inside each function to reduce disturbance on the
+ * resulting trace.
+ *
+ * The good thing of this API is that it's minimal but flexible enough to
+ * generate interesting traces.
+ *
+ * Also note that constants used in the code are generated directly from the,
+ * optionally, companion PCF file.  For example, if we have the following PCF
+ * definitions:
+ *
+ *      EVENT_TYPE
+ *      0    10    State change
+ *      VALUES
+ *      1      Running
+ *      2      Locked
+ *      3      Waiting
+ *
+ *
+ *      EVENT_TYPE
+ *      0    20    Memory transfer
+ *      VALUES
+ *      0      Finish
+ *
+ * The build system will automatically generate following definitions, and also
+ * make them available to every source file:
+ *
+ *      #define STATE_CHANGE  10
+ *      #define RUNNING  1
+ *      #define LOCKED  1
+ *      #define WAITING  1
+ *      #define MEMORY_TRANSFER  20
+ *      #define FINISH  0
+ *
+ * Notice how easy is to produce a clash among the constants.  Therefore, it is
+ * the main limitation of the actual method.
+ */
+
 #include <stdarg.h>
 
 
