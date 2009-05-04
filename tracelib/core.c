@@ -100,12 +100,12 @@ void ptt_fini (void)
 void *ptt_startthread (void *threadbuf)
 {
         struct ptt_threadbuf *tb = threadbuf;
-        int e;
+        int tid, e;
 
         e = pthread_mutex_lock(&PttGlobal.countlock);
         ptt_assert(e == 0);
         /* Begin critical section */
-        tb->threadid = PttGlobal.threadcount;
+        tid = PttGlobal.threadcount;
         PttGlobal.threadcount++;
         /* End critical section */
         e = pthread_mutex_unlock(&PttGlobal.countlock);
@@ -121,7 +121,7 @@ void *ptt_startthread (void *threadbuf)
                 char filename[32];
 
                 snprintf(filename, 31, "/tmp/ptt-%d-%04d.tt",
-                         PttGlobal.processid, tb->threadid + 1);
+                         PttGlobal.processid, tid + 1);
                 tb->tracefile = open(filename, O_CREAT | O_WRONLY, 00600);
                 ptt_assert(tb->tracefile != -1);
         }

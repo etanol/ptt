@@ -41,7 +41,6 @@ struct ptt_threadbuf
 {
         void *(*function)(void *);
         void *parameter;
-        int threadid;
         int tracefile;
         int eventcount;
         struct ptt_event events[PTT_BUFFER_SIZE];
