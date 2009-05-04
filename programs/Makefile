@@ -1,12 +1,14 @@
 PTT_PATH := ../tracelib
 PROGRAMS := dotprod matmul prodcons blackscholes
 
-dotprod_SOURCES      := dotprod.c
+dotprod_SOURCES := dotprod.c
+dotprod_PCF     := dotprod.pcf
+
 matmul_SOURCES       := matmul.c
 prodcons_SOURCES     := prodcons.c
-blackscholes_SOURCES := blackscholes.c
 
-blackscholes_LIBS := m
+blackscholes_SOURCES := blackscholes.c
+blackscholes_LIBS    := m
 
 include $(PTT_PATH)/rules.mk
 

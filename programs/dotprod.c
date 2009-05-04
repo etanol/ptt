@@ -65,15 +65,19 @@ void *dotprod (void *arg)
 
         /* Perform the dot product and assign result to the appropriate variable
          * in the structure */
+        ptt_event(PHASE, MAIN_LOOP);
         mysum = 0;
         for (i = start;  i < end;  i++)
                 mysum += x[i] * y[i];
 
         /* Lock a mutex prior to updating the value in the shared structure, and
          * unlock it upon updating */
+        ptt_event(PHASE, MUTEX_LOCK);
         pthread_mutex_lock(&mutexsum);
+        ptt_events(PHASE, CRITICAL_SECTION);
         dotstr.sum += mysum;
         pthread_mutex_unlock(&mutexsum);
+        ptt_event(PHASE, END);
 
         pthread_exit((void *) 0);
 }
@@ -96,6 +100,7 @@ int main (int argc, char *argv[])
         pthread_attr_t attr;
 
         /* Assign storage and initialize values */
+        ptt_event(PHASE, INITIALIZATION);
         a = (double *) malloc(NUMTHRDS * VECLEN * sizeof (double));
         b = (double *) malloc(NUMTHRDS * VECLEN * sizeof (double));
 
@@ -116,6 +121,7 @@ int main (int argc, char *argv[])
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
+        ptt_event(PHASE, LAUNCH_THREADS);
         for (i = 0;  i < NUMTHRDS;  i++)
         {
                 /*
@@ -129,10 +135,12 @@ int main (int argc, char *argv[])
         pthread_attr_destroy(&attr);
 
         /* Wait on the other threads */
+        ptt_event(PHASE, WAIT_THREADS);
         for (i = 0;  i < NUMTHRDS;  i++)
                 pthread_join(callThd[i], &status);
 
         /* After joining, print out the results and cleanup */
+        ptt_event(PHASE, FINALIZATION);
         printf("Sum =  %f \n", dotstr.sum);
         free(a);
         free(b);
