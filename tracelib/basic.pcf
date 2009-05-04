@@ -4,7 +4,7 @@ LEVEL               THREAD
 UNITS               NANOSEC
 LOOK_BACK           100
 SPEED               1
-FLAG_ICONS          DISABLED
+FLAG_ICONS          ENABLED
 NUM_OF_STATE_COLORS 400
 YMAX_SCALE          100
 
