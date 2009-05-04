@@ -24,11 +24,21 @@
 #  error "This file is private to the tracing implementation.  Include ptt.h instead"
 #endif
 
+/*
+ * Processor's time stamp or cycle counter retrieval for various architectures.
+ */
+
 #include <stdint.h>
+
+/* Clobber some keywords, just in case */
+#define inline    __inline__
+#define asm       __asm__
+#define volatile  __volatile__
+
 
 #if defined(__i386__)
 
-static uint64_t ptt_getticks (void)
+static inline uint64_t ptt_getticks (void)
 {
         uint64_t ret;
 
@@ -61,7 +71,23 @@ static inline uint64_t ptt_getticks (void)
         return (uint64_t) tbu0 << 32 | tbl;
 }
 
+#elif defined(__ia64__)
+
+static inline ticks getticks(void)
+{
+     ticks ret;
+
+     asm volatile ("mov %0=ar.itc" : "=r"(ret));
+     return ret;
+}
+
 #else
-#  error "There is no timestamp support for this environment"
+#  error "There is no time stamp support for this environment"
 #endif
+
+
+/* Remove the clobbering to be a good citizen */
+#undef volatile
+#undef asm
+#undef inline
 
