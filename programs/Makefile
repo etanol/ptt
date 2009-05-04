@@ -4,7 +4,9 @@ PROGRAMS := dotprod matmul prodcons blackscholes
 dotprod_SOURCES := dotprod.c
 dotprod_PCF     := dotprod.pcf
 
-matmul_SOURCES       := matmul.c
+matmul_SOURCES := matmul.c
+matmul_PCF     := matmul.pcf
+
 prodcons_SOURCES     := prodcons.c
 
 blackscholes_SOURCES := blackscholes.c

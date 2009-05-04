@@ -1,0 +1,13 @@
+EVENT_TYPE
+0    200    Iteration
+
+
+EVENT_TYPE
+0    300    Phase
+VALUES
+1      Setup
+2      Thread creation
+3      Thread wait
+4      Check
+5      Main loop
+6      End

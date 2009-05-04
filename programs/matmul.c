@@ -35,11 +35,13 @@ void mm (int me_no,int noproc, int n, double a[NDIM][NDIM], double b[NDIM][NDIM]
         int i, j, k;
         double sum;
 
+        ptt_event(PHASE, MAIN_LOOP);
         i = me_no;
         while (i < n)
         {
                 for (j = 0;  j < n;  j++)
                 {
+                        ptt_event(ITERATION, j);
                         sum = 0.0;
                         for (k = 0; k < n; k++)
                                 sum = sum + a[i][k] * b[k][j];
@@ -48,6 +50,7 @@ void mm (int me_no,int noproc, int n, double a[NDIM][NDIM], double b[NDIM][NDIM]
                 }
                 i += noproc;
         }
+        ptt_event(PHASE, END);
 }
 
 
@@ -66,6 +69,7 @@ int main (int argc, char **argv)
         pthread_attr_t pthread_custom_attr;
         parm *arg;
 
+        ptt_event(PHASE, SETUP);
         for (i = 0;  i < NDIM;  i++)
                 for (j = 0;  j < NDIM;  j++)
                 {
@@ -95,6 +99,7 @@ int main (int argc, char **argv)
         /* Start up thread */
 
         /* Spawn thread */
+        ptt_event(PHASE, THREAD_CREATION);
         for (i = 0;  i < n;  i++)
         {
                 arg[i].id = i;
@@ -107,9 +112,11 @@ int main (int argc, char **argv)
                                (void *) (arg + i));
         }
 
+        ptt_event(PHASE, THREAD_WAIT);
         for (i = 0;  i < n;  i++)
                 pthread_join(threads[i], NULL);
         /* print_matrix(NDIM); */
+        ptt_event(PHASE, CHECK);
         check_matrix(NDIM);
         free(arg);
         return 0;
