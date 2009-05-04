@@ -74,7 +74,7 @@ void *dotprod (void *arg)
          * unlock it upon updating */
         ptt_event(PHASE, MUTEX_LOCK);
         pthread_mutex_lock(&mutexsum);
-        ptt_events(PHASE, CRITICAL_SECTION);
+        ptt_event(PHASE, CRITICAL_SECTION);
         dotstr.sum += mysum;
         pthread_mutex_unlock(&mutexsum);
         ptt_event(PHASE, END);
