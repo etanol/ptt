@@ -49,11 +49,6 @@ $(ptt_sources:.c=.o): %.o: %.c $(ptt_headers)
 $(ptt_sources:.c=.go): %.go: %.c $(ptt_headers)
 	$(GCC) -DDEBUG $(DEFS) $(CFLAGS_DBG) -c -o $@ $<
 
-# AWK code to stringize the PCF
-ptt_stringize := BEGIN { print "const char *PttPCF = " } \
-                       { print "\"" $$$$0 "\\n\"" } \
-                 END   { print ";" }
-
 
 ############################  USER PROGRAMS RULES  ############################
 
@@ -62,9 +57,12 @@ define gen_build_rules
 $(1)_OBJ := $(patsubst %.c,%.o,$(filter %.c,$($(1)_SOURCES)) pcf_$(1).c)
 $(1)_UNT := $(patsubst %.c,%.uo,$(filter %.c,$($(1)_SOURCES)))
 $(1)_DBG := $(patsubst %.c,%.go,$(filter %.c,$($(1)_SOURCES)) pcf_$(1).c)
+$(1)_PCF := $(PCF_FILES) $($(1)_PCF)
+$(1)_PCH := $$(if $$($(1)_PCF),pcf_$(1).h)
+$(1)_PCI := $$(if $$($(1)_PCF),-include pcf_$(1).h)
 
 objects += $$($(1)_OBJ) $$($(1)_UNT) $$($(1)_DBG)
-autopcf += pcf_$(1).c
+autopcf += pcf_$(1).c pcf_$(1).h
 
 $(1): $$($(1)_OBJ) $(ptt_object)
 	$(GCC) $(LDWRAP) $(LINKFLAGS) -o $$@ $$^ -pthread $(addprefix -l,$($(1)_LIBS))
@@ -75,17 +73,20 @@ $(1).untraced: $$($(1)_UNT)
 $(1).debug: $$($(1)_DBG) $(ptt_debug)
 	$(GCC) $(LDWRAP) $(LINKFLAGS_DBG) -o $$@ $$^ -pthread $(addprefix -l,$($(1)_LIBS))
 
-$$($(1)_OBJ): %.o: %.c $(filter %.h,$($(1)_SOURCES))
-	$(GCC) $(DEFS) -include $(ptt_userapi) $(CFLAGS) -c -o $$@ $$<
+$$($(1)_OBJ): %.o: %.c $(filter %.h,$($(1)_SOURCES)) $$($(1)_PCH)
+	$(GCC) $(DEFS) -include $(ptt_userapi) $$($(1)_PCI) $(CFLAGS) -c -o $$@ $$<
 
-$$($(1)_UNT): %.uo: %.c $(filter %.h,$($(1)_SOURCES))
-	$(GCC) $(DEFS) -include $(ptt_stub) $(CFLAGS) -c -o $$@ $$<
+$$($(1)_UNT): %.uo: %.c $(filter %.h,$($(1)_SOURCES)) $$($(1)_PCH)
+	$(GCC) $(DEFS) -include $(ptt_stub) $$($(1)_PCI) $(CFLAGS) -c -o $$@ $$<
 
-$$($(1)_DBG): %.go: %.c $(filter %.h,$($(1)_SOURCES))
-	$(GCC) $(DEFS) -include $(ptt_userapi) $(CFLAGS_DBG) -c -o $$@ $$<
+$$($(1)_DBG): %.go: %.c $(filter %.h,$($(1)_SOURCES)) $$($(1)_PCH)
+	$(GCC) $(DEFS) -include $(ptt_userapi) $$($(1)_PCI) $(CFLAGS_DBG) -c -o $$@ $$<
 
-pcf_$(1).c: $(ptt_pcf) $(PCF_FILES) $$($(1)_PCF)
-	awk '$(ptt_stringize)' $$^ >$$@
+pcf_$(1).h: $$($(1)_PCF)
+	awk -f $(PTT_PATH)/enumize.awk $$^ >$$@
+
+pcf_$(1).c: $(ptt_pcf) $$($(1)_PCF)
+	awk -f $(PTT_PATH)/stringize.awk $$^ >$$@
 endef
 
 # Perform rule generation
