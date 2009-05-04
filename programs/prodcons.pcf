@@ -1,0 +1,14 @@
+EVENT_TYPE
+0    500    State
+VALUES
+0      Idle
+1      Running
+2      Locking
+3      Unlocking
+4      Cond waiting
+5      Cond OK
+6      Check
+7      Forking
+8      Mutual exclusion
+9      Sleeping
+10      Thread waiting
