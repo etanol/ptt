@@ -94,8 +94,8 @@ void ptt_fini (void)
 
 /*
  * Prepare structures to trace the current thread.  This is a proxy function
- * intended to intercept thread creation, configured from our special
- * pthread_create wrapper.
+ * intended to intercept thread creation, called from our special pthread_create
+ * wrapper.
  */
 void *ptt_startthread (void *threadbuf)
 {

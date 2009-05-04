@@ -25,6 +25,10 @@
  * This approach has some advantages over patching symbol tables with the
  * LD_PRELOAD trick: it requires less code (most of the work is performed by the
  * linker) and it is easier to run (no special environment needed).
+ *
+ * One of the most noticeable drawbacks (if it can be considered as such), is
+ * the overhead of the additional activation record that reduces some of the
+ * thread's stack space.
  */
 
 #include <stdlib.h>
