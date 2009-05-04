@@ -19,9 +19,17 @@ int __wrap_pthread_create (pthread_t *tidp, const pthread_attr_t *attrp,
                            void *(*func)(void *), void *arg)
 {
         struct ptt_threadbuf *tb;
+        int e;
 
+        e = pthread_mutex_lock(&PttGlobal.tlslock);
+        ptt_assert(e == 0);
+        /* Begin critical section */
         tb = malloc(sizeof(struct ptt_threadbuf));
         ptt_assert(tb != NULL);
+        /* End critical section */
+        e = pthread_mutex_unlock(&PttGlobal.tlslock);
+        ptt_assert(e == 0);
+
         tb->function = func;
         tb->parameter = arg;
         return __real_pthread_create(tidp, attrp, ptt_startthread, tb);

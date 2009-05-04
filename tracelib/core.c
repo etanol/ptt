@@ -39,7 +39,7 @@ void ptt_init (void)
         PttGlobal.processid = getpid();
         PttGlobal.threadcount = 0;
         pthread_mutex_init(&PttGlobal.countlock, NULL);
-
+        pthread_mutex_init(&PttGlobal.tlslock, NULL);
         e = pthread_key_create(&PttGlobal.tlskey, ptt_endthread);
         ptt_assert(e == 0);
 
@@ -144,7 +144,13 @@ void ptt_endthread (void *threadbuf)
         e = close(tb->tracefile);
         ptt_assert(e != -1);
 
+        e = pthread_mutex_lock(&PttGlobal.tlslock);
+        ptt_assert(e == 0);
+        /* Begin critical section */
         free(tb);
+        /* End critical section */
+        e = pthread_mutex_unlock(&PttGlobal.tlslock);
+        ptt_assert(e == 0);
 }
 
 

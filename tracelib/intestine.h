@@ -41,6 +41,7 @@ struct ptt_threadbuf
 struct _PTT_GlobalScope
 {
         pthread_key_t tlskey;
+        pthread_mutex_t tlslock;
         pthread_mutex_t countlock;
         pid_t processid;
         int threadcount;
