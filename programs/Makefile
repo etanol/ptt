@@ -11,6 +11,7 @@ prodcons_SOURCES := prodcons.c
 prodcons_PCF     := prodcons.pcf
 
 blackscholes_SOURCES := blackscholes.c
+blackscholes_PCF     := bs.pcf
 blackscholes_LIBS    := m
 
 include $(PTT_PATH)/rules.mk

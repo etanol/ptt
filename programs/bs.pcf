@@ -1,0 +1,22 @@
+EVENT_TYPE
+0    1000    Run number
+0    1001    Calculate index
+0    1002    Checking
+0    1003    Error count
+
+
+EVENT_TYPE
+0    2000    Main loop
+VALUES
+0      End
+1      Begin
+
+
+EVENT_TYPE
+0    3000    Phase
+VALUES
+1      Running
+2      Thread creation
+3      Thread join
+4      Barrier wait
+5      Finishing

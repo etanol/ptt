@@ -219,27 +219,37 @@ void *bs_thread (void *tid_ptr)
         int start = tid * (numOptions / nThreads);
         int end = start + (numOptions / nThreads);
 
+        ptt_event(PHASE, BARRIER_WAIT);
         pthread_barrier_wait(&barrier);
 
+        ptt_event(MAIN_LOOP, BEGIN);
         for (j = 0;  j < NUM_RUNS;  j++)
+        {
+                ptt_events(2, RUN_NUMBER, j, PHASE, RUNNING);
+
                 for (i = start;  i < end;  i++)
                 {
                         /* Calling main function to calculate option value based on
                          * Black & Sholes's equation */
+                        ptt_event(CALCULATE_INDEX, i);
                         price = BlkSchlsEqEuroNoDiv(sptprice[i], strike[i],
                                                     rate[i], volatility[i],
                                                     otime[i], otype[i], 0);
                         prices[i] = price;
 #ifdef DEBUG
+                        ptt_event(CHECKING, i);
                         priceDelta = data[i].DGrefval - price;
                         if (fabs(priceDelta) >= 1e-4)
                         {
                                 printf("Error on %d. Computed=%.5f, Ref=%.5f, Delta=%.5f\n",
                                        i, price, data[i].DGrefval, priceDelta);
                                 numError++;
+                                ptt_event(ERROR_COUNT, numError);
                         }
 #endif
                 }
+        }
+        ptt_event(MAIN_LOOP, END);
 
         return NULL;
 }
@@ -328,6 +338,7 @@ int main (int argc, char **argv)
                numOptions * (sizeof(OptionData) + sizeof(int)));
 
 
+        ptt_event(PHASE, THREAD_CREATION);
         for (tid = 0;  tid < nThreads;  tid++)
         {
                 tids[tid] = tid;
@@ -338,15 +349,14 @@ int main (int argc, char **argv)
 
         }
 
+        ptt_event(PHASE, THREAD_JOIN);
         for (i = 0;  i < MAX_THREADS;  i++)
         {
                 if (threadsTable[i] == -1)
                         break;
                 pthread_join(threadsTable[i], &ret);
         }
-
-        tid = 0;
-        bs_thread(&tid);
+        ptt_event(PHASE, FINISHING);
 
 #ifdef DEBUG
         printf("Num Errors: %d\n", numError);
