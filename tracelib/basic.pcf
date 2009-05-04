@@ -11,7 +11,7 @@ YMAX_SCALE          100
 
 DEFAULT_SEMANTIC
 
-THREAD_FUNC          LastEvtValue
+THREAD_FUNC          Last Evt Val
 
 
 EVENT_TYPE
