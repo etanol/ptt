@@ -1,11 +1,11 @@
 EVENT_TYPE
 0    300    Phase
 VALUES
-1    Initialization
-2    Launch threads
-3    Main loop
-4    Mutex lock
-5    Critical section
-6    End
-7    Wait threads
-8    Finalization
+1      Initialization
+2      Launch threads
+3      Main loop
+4      Mutex lock
+5      Critical section
+6      End
+7      Wait threads
+8      Finalization
