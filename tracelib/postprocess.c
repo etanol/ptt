@@ -47,8 +47,8 @@ struct ptt_threadtrace
         int fd;
         unsigned int count;
         unsigned int current;
-        char filename[32];
         struct ptt_event *event;
+        char filename[32];
 };
 
 
