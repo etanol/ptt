@@ -83,11 +83,11 @@ void ptt_event (int type, int value)
                 ptt_assert(e == PTT_BUFFER_SIZE * sizeof(struct ptt_event));
 
                 tb->events[0].timestamp = fts;
-                tb->events[0].type = PTT_EVENT_FLUSHING;
-                tb->events[0].value = 1;
+                tb->events[0].type = PTT_PHASE_EVENT;
+                tb->events[0].value = 2;
                 tb->events[1].timestamp = ptt_getticks();
-                tb->events[1].type = PTT_EVENT_FLUSHING;
-                tb->events[1].value = 0;
+                tb->events[1].type = PTT_PHASE_EVENT;
+                tb->events[1].value = 1;
                 tb->eventcount = 2;
         }
 }
@@ -145,7 +145,6 @@ void ptt_events (int count, ...)
                 /* Flush again if the two events do not fit in the buffer */
                 if (tb->eventcount + 2 >= PTT_BUFFER_SIZE)
                 {
-                        fc++;
                         e = write(tb->tracefile, tb->events, tb->eventcount *
                                                              sizeof(struct ptt_event));
                         ptt_assert(e == tb->eventcount * sizeof(struct ptt_event));
@@ -156,12 +155,12 @@ void ptt_events (int count, ...)
                 tb->eventcount += 2;
 
                 tb->events[i].timestamp = fts;
-                tb->events[i].type = PTT_EVENT_FLUSHING;
-                tb->events[i].value = fc;
+                tb->events[i].type = PTT_PHASE_EVENT;
+                tb->events[i].value = 2;
                 i++;
                 tb->events[i].timestamp = ptt_getticks();
-                tb->events[i].type = PTT_EVENT_FLUSHING;
-                tb->events[i].value = 0;
+                tb->events[i].type = PTT_PHASE_EVENT;
+                tb->events[i].value = 1;
         }
 }
 

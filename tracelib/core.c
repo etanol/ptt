@@ -127,7 +127,7 @@ void *ptt_startthread (void *threadbuf)
         }
 
         tb->events[0].timestamp = ptt_getticks();
-        tb->events[0].type = PTT_EVENT_THREAD_ALIVE;
+        tb->events[0].type = PTT_PHASE_EVENT;
         tb->events[0].value = 1;
         tb->eventcount = 1;
 
@@ -147,7 +147,7 @@ void ptt_endthread (void *threadbuf)
         i = tb->eventcount;
         tb->eventcount++;
         tb->events[i].timestamp = ptt_getticks();
-        tb->events[i].type = PTT_EVENT_THREAD_ALIVE;
+        tb->events[i].type = PTT_PHASE_EVENT;
         tb->events[i].value = 0;
 
         /* Final trace flush, not traced like the previous ones */

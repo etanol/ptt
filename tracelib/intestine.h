@@ -16,9 +16,7 @@
 #include <pthread.h>
 
 #define PTT_BUFFER_SIZE  32
-
-#define PTT_EVENT_THREAD_ALIVE  1
-#define PTT_EVENT_FLUSHING      2
+#define PTT_PHASE_EVENT  69000000
 
 /*
  * Single event, as simple as it gets.
