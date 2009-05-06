@@ -1,0 +1,67 @@
+\documentclass[a4paper,11pt,pdftex]{article}
+
+\usepackage{a4wide}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage[pdftex]{graphicx}
+\usepackage[pdftex]{hyperref}
+
+\hypersetup{
+        pdftitle   = A PThreads Tracing framework,
+        pdfauthor  = Isaac Jurado Peinado,
+        pdfsubject = Software instrumentation and tracing,
+        colorlinks = true,
+        linkcolor  = black,
+        citecolor  = black,
+        filecolor  = black,
+        urlcolor   = blue
+}
+
+%\pagestyle{fancy}
+%\fancyfoot{}
+%\renewcommand{\footrulewidth}{0pt}
+%\fancyhead{\thepage}
+
+\setlength{\parindent}{0pt}
+\renewcommand{\url}[1]{\href{#1}{#1}}
+
+\newfloat{listing}{H}{lol}[section]
+\floatname{listing}{Listing}
+
+\title{A PThreads Tracing framework}
+\author{Isaac Jurado Peinado}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\listoffigures
+\listof{listing}{List of Code Listings}
+
+\setlength{\parskip}{.7\baselineskip plus .2\baselineskip minus .1\baselineskip}
+\newpage
+
+\section{Introduction}
+
+This documents presents PTT\footnote{Which stands for \textbf{P}OSIX
+\textbf{T}hreads \textbf{T}racing}: a simple, easy to use and semi automatic
+framework for tracing multi-threaded applications that make use of the POSIX
+Threads standard API.  The tracing is achieved by means of a manual source code
+instrumentation, supported by some automated processes.  Thus, categorizing this
+tool as a library would not be completely correct because the build system also
+plays an important role in the instrumentation activity.
+
+Section \ref{sec:applications} explains how to instrument an application and
+provides an example taken from the PARSEC
+benchmarks\footnote{\url{http://parsec.cs.princeton.edu}}.  Section
+\ref{sec:framework} describes the overall design of PTT as well as some
+important details.  Finally, section \ref{sec:conclusions} discusses the lessons
+learned after completing the project.
+
+\input{applications}
+\input{framework}
+\input{conclusions}
+
+\end{document}
+
+% vim:ft=tex

@@ -1,0 +1,154 @@
+\section{Framework implementation}
+\label{sec:framework}
+
+Once presented the mode of operation from the user point of view, it is time to
+dip into the details.  As already mentioned in the introduction, the PTT
+framework basically consists of two main components:
+
+\begin{itemize}
+\item Build system.
+\item Tracing library.
+\end{itemize}
+
+
+\subsection{Build system}
+
+To offer a functionality similar to \emph{automake} the build rules make use of
+some advanced features from GNU Make.  Dependencies are properly defined so a
+change in the tracing library or one of the preprocessing scripts.  However, the
+dependency relationships established between the header and source files of the
+user's programs are not as fine grained as they could.  A functionality that was
+dropped due to the attached complexity increase to the build system.
+
+Most of the magic involved in the automation explained in section
+\ref{sec:pcf_sample} is achieved via simple preprocessing scripts that parse all
+the PCF contents concatenated in a single stream.  For each program containing
+custom PCF definitions, two files are generated:
+
+\begin{itemize}
+\item \verb:pcf_program.h:: containing the symbolic constants for the event
+types and values.  This file is also included automatically, so no explicit
+inclusion is required.
+\item \verb:pcf_program.c:: containing the full PCF contents, in the form of a C
+string, to be generated for each execution.
+\end{itemize}
+
+In case on extra PCF content is attached to the program, the header file is
+not generated.
+
+The build system also takes care of building the library in case it is
+necessary, issuing the proper compiler and linker flags and embedding the
+tracing library into the program binary.  In particular, one linker flag is of
+special interest and it is discussed later in this section.
+
+
+\subsection{Tracing library}
+
+Using some compiler and linker special trickery allows the library to have most
+of its code called automatically, freeing the user from that responsibility.
+This approach has two main advantages:
+
+\begin{itemize}
+\item Eases the instrumentation process.
+\item Reduces the troubleshooting scenarios produced by potential human errors,
+like, for example, forgetting to insert a concrete initialization or
+finalization function.
+\end{itemize}
+
+The automation happens at two levels: process and thread.  Each level needs
+initialisation and finalisation.  At the process level, the library makes use of
+the special GCC function attributes \emph{constructor} and \emph{destructor}.
+They instruct the compiler to add a call before the execution of the main
+function, and before finishing the process respectively.
+
+At the thread level, detecting thread finalization is easy thanks to the
+destructor function that can be associated to a \verb:pthread_key_t:.  This data
+type provides \emph{thread local storage} which, at the same time, it is used by
+the library to store separate per thread event buffers.  When the thread
+finishes, all its defined \emph{thread local storage} keys are released, also
+calling their destructor function, if defined.
+
+Detecting thread creation is a different story.  It is important to
+automatically intercept thread creation because the library needs to create
+tracing structures for the new thread, otherwise the user would have to do it.
+In this case some linker aid is necessary.  The idea is to intercept calls to
+the \verb:pthread_create: function to be able to alter some of its parameters;
+in particular the thread function and its parameter.  Essentially, once
+\verb:pthread_create: is intercepted, the process of creating a thread is the
+following:
+
+\begin{enumerate}
+\item User calls \verb:pthread_create: providing a function.
+\item The call is redirected to the tracing library.
+\item The tracing library allocates space for the new tracing structures.
+\item The tracing library calls the real \verb:pthread_create: providing a
+different function, an internal \emph{proxy} function.
+\item The system creates the new thread and calls the proxy function.
+\item The proxy function initializes the tracing structures.
+\item The proxy function finally calls the user function provided initially.
+\end{enumerate}
+
+Focusing now on bare function call interception, there are two main approaches
+that do not involve modifying the source code:
+
+\begin{itemize}
+\item The \verb:LD_PRELOAD: trick.
+\item The linker \verb:--wrap: flag.
+\end{itemize}
+
+The first one is a run time solution, which has the advantage of not requiring
+recompilation of the program.  It has the downside of requiring a slightly
+complex environment to make it work.  Besides, the events are inserted in the
+source code so recompilation is still necessary.  This leaves the second
+solution.
+
+The GNU linker provides a special \verb:--wrap: flag that allows to modify
+external symbol resolution between objects.  The \verb:--wrap: switch requires
+an argument: the symbol to catch.  When the linker finds an unresolved reference
+to the symbol, e.g. \verb:func:, the reference is redirected to the symbol
+\verb:__wrap_func: instead.  Then the linker looks for unresolved references to
+the symbol \verb:__real_func:, which is redirected to \verb:func:.
+
+Therefore, with a \verb:__wrap_pthread_create: function defined and the proper
+command line switches, the linker does the job and the final binary does not
+need any special environment nor library available.
+
+
+\subsection{Post-processing}
+
+To reduce memory consumption, the event buffers have a limited capacity.  When
+buffers are filled they need to be flushed to disk to allow more events to enter
+the buffer.  Each thread flushes to its own file to avoid locking, so at the end
+of the execution there are as many files as threads have been executed.
+
+At this point the traces need to be merged and each event needs to be adjusted a
+bit.  In particular, the time of each event needs to be converted to
+nanoseconds.  This is where post processing comes into play.
+
+Inspired by the \emph{Cell Superscalar} framework.  Such post processing stage
+is performed within the same process, right at the end of the execution.  This
+way the post process can be simplified.
+
+To minimize flush overhead, threads dump their buffers in raw binary form.  If
+trace merging was separated from generation, byte endianness should be taken
+into account as it would open the possibility of trying to post process binary
+traces generated in a different architecture.
+
+On the other hand, binary traces can be considered temporary files and created
+as such; which raises the chances to be stored in a local or RAM file system.
+
+Finally, some global information can be kept in main memory, saving the post
+processor from having to parse it.
+
+
+\subsection{Framework limitations}
+
+In PTT, the main and only tracing primitive is the event.  There is no
+communication nor state primitives as in other tracing tools.  Neither is the
+availability of hardware counters nor, obviously, automatic events added with
+such information.
+
+Nevertheless, these limitations are in harmony with the main design goals of
+simplicity and ease of use.
+
+% vim:ft=tex:spell
