@@ -1,6 +1,8 @@
 BEGIN {
     parsing = 0
+    something = 0
     print "/* Automatically generated.  Do not edit. */"
+    print "enum\n{"
 }
 
 
@@ -34,6 +36,11 @@ BEGIN {
     }
     macro = toupper(caption)
     gsub(/ +/, "_", macro)
-    printf "#define %s  %d\n", macro, value
+    printf "        %s = %d,\n", macro, value
+}
+
+
+END {
+    print "};"
 }
 
