@@ -16,8 +16,7 @@
  * way (suppose "--wrap func":
  *
  *      1. Unresolved references to "func" are changed so that they point to
- *         "__wrap_func" instead.  Then the "__wrap_func" symbol is searched
- *         instead.
+ *         "__wrap_func" instead.  Then the "__wrap_func" symbol is searched.
  *
  *      2. Unresolved references to "__real_func" are changed so that they point
  *         to "func".  And then "func" is searched.
