@@ -1,0 +1,21 @@
+EVENT_TYPE
+0    1000    Encode task
+VALUES
+0      None
+l      Compress
+2      Sub Compress
+3      Chunk process
+4      Sub Chunk process
+5      Find all anchors
+6      Data process
+7      Send block
+
+
+EVENT_TYPE
+0    1001    Sync
+VALUES
+0      No activity
+1      Enqueue wait
+2      Enqueue copy
+3      Dequeue wait
+4      Dequeue copy

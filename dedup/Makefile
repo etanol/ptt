@@ -26,6 +26,7 @@ dedup_SOURCES := binheap.c \
                  util.c \
                  util.h
 
+dedup_PCF := events.pcf
 dedup_LIBS := z ssl
 
 include $(PTT_PATH)/rules.mk

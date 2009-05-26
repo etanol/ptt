@@ -31,6 +31,7 @@ void queue_signal_terminate(struct queue * que) {
 }
 
 int dequeue(struct queue * que, int * fetch_count, void ** to_buf) {
+      ptt_event(SYNC, DEQUEUE_WAIT);
 #ifdef PARALLEL
       pthread_mutex_lock(&que->mutex);
       while (que->tail == que->head && (que->end_count) < que->threads) {
@@ -44,6 +45,7 @@ int dequeue(struct queue * que, int * fetch_count, void ** to_buf) {
 #endif
         return -1;
       }
+      ptt_event(SYNC, DEQUEUE_COPY);
       for ((*fetch_count) = 0; (*fetch_count) < ITEM_PER_FETCH; (*fetch_count) ++) {
         to_buf[(*fetch_count)] = que->data[que->tail];
         que->tail ++;
@@ -57,15 +59,18 @@ int dequeue(struct queue * que, int * fetch_count, void ** to_buf) {
       pthread_cond_signal(&que->full);
       pthread_mutex_unlock(&que->mutex);
 #endif
+      ptt_event(SYNC, NO_ACTIVITY);
       return 0;
 }
 
 int enqueue(struct queue * que, int * fetch_count, void ** from_buf) {
+  ptt_event(SYNC, ENQUEUE_WAIT);
 #ifdef PARALLEL
   pthread_mutex_lock(&que->mutex);
   while (que->head == (que->tail-1+que->size)%que->size)
     pthread_cond_wait(&que->full, &que->mutex);
 #endif
+  ptt_event(SYNC, ENQUEUE_COPY);
   if ((*fetch_count) == -9999) {
     que->data[que->head] = from_buf[0];
     que->head ++;
@@ -82,6 +87,7 @@ int enqueue(struct queue * que, int * fetch_count, void ** from_buf) {
   pthread_cond_signal(&que->empty);
   pthread_mutex_unlock(&que->mutex);
 #endif
+  ptt_event(SYNC, NO_ACTIVITY);
   return 0;
 }
 

@@ -157,6 +157,7 @@ void *Compress(void * targs) {
   send_buf_item * item;
   send_buf_item ** fetchbuf;
 
+  ptt_event(ENCODE_TASK, COMPRESS);
   fetchbuf = (send_buf_item **)malloc(sizeof(send_buf_item *)*ITEM_PER_FETCH);
   if(fetchbuf == NULL) {
     EXIT_TRACE("Memory allocation failed.\n");
@@ -181,7 +182,9 @@ void *Compress(void * targs) {
 
     if (item == NULL) break;
 
+    ptt_event(ENCODE_TASK, SUB_COMPRESS);
     sub_Compress(item);
+    ptt_event(ENCODE_TASK, COMPRESS);
 
     tmpbuf[tmp_count] = item;
     tmp_count ++;
@@ -201,6 +204,7 @@ void *Compress(void * targs) {
 
   //count the number of compress threads that have finished
   queue_signal_terminate(&send_que[qid]);
+  ptt_event(ENCODE_TASK, NONE);
   return NULL;
 }
 
@@ -318,6 +322,7 @@ ChunkProcess(void * targs) {
   send_buf_item * tmpsendbuf[ITEM_PER_INSERT];
   int tmpsend_count = 0;
 
+  ptt_event(ENCODE_TASK, CHUNK_PROCESS);
   while (1) {
     //if no items existing, fetch a group of items from the pipeline
     if (fetch_count == fetch_start) {
@@ -336,7 +341,9 @@ ChunkProcess(void * targs) {
 
     if (chunk.start == NULL) break;
 
+    ptt_event(ENCODE_TASK, SUB_CHUNK_PROCESS);
     item = sub_ChunkProcess(chunk);
+    ptt_event(ENCODE_TASK, CHUNK_PROCESS);
 
     if (item->type == TYPE_COMPRESS) {
 
@@ -366,6 +373,7 @@ ChunkProcess(void * targs) {
 
   //one more chunkProcess thread ends
   queue_signal_terminate(&compress_que[qid]);
+  ptt_event(ENCODE_TASK, NONE);
     return NULL;
 }
 
@@ -380,6 +388,7 @@ FindAllAnchors(void * targs) {
   int fetch_count = 0;
   int fetch_start = 0;
 
+  ptt_event(ENCODE_TASK, FIND_ALL_ANCHORS);
   u32int * rabintab = malloc(256*sizeof rabintab[0]);
   u32int * rabinwintab = malloc(256*sizeof rabintab[0]);
   if(rabintab == NULL || rabinwintab == NULL) {
@@ -493,6 +502,7 @@ FindAllAnchors(void * targs) {
 
     //count the end thread
     queue_signal_terminate(&chunk_que[qid]);
+    ptt_event(ENCODE_TASK, NONE);
   return NULL;
 }
 
@@ -649,6 +659,7 @@ DataProcess(void * targs){
 
   u_char * anchor;
 
+  ptt_event(ENCODE_TASK, DATA_PROCESS);
   u_char * src = (u_char *)malloc(MAXBUF*2);
   u_char * left = (u_char *)malloc(MAXBUF);
   u_char * new = (u_char *) malloc(MAXBUF);
@@ -752,6 +763,7 @@ DataProcess(void * targs){
     queue_signal_terminate(&anchor_que[i]);
   }
 
+  ptt_event(ENCODE_TASK, NONE);
   return 0;
 }
 
@@ -768,6 +780,7 @@ SendBlock(void * targs)
   int fd = 0;
   struct hash_entry * entry;
 
+  ptt_event(ENCODE_TASK, SEND_BLOCK);
   fd = open(conf->outfile, O_CREAT|O_TRUNC|O_WRONLY|O_TRUNC);
   if (fd < 0) {
     perror("SendBlock open");
@@ -1051,6 +1064,7 @@ SendBlock(void * targs)
   }
 
   close(fd);
+  ptt_event(ENCODE_TASK, NONE);
 
   return NULL;
 }
