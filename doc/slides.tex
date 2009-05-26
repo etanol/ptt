@@ -1,0 +1,118 @@
+\documentclass{beamer}
+
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+
+% Beamer theme selection and other tuning
+\usetheme{Boadilla}
+\setbeamertemplate{footline}[page number]
+\setbeamertemplate{navigation symbols}{}
+%\setbeamertemplate{frametitle continuation}%
+%    [from second][(\insertcontinuationcountroman)]
+
+\title{POSIX Threads Tracing}
+\subtitle{The gory details}
+\author{Isaac Jurado}
+\date{EITM}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Design rationale}
+  \begin{itemize}
+    \item Mostly inspired by Cell/SMP Superscalar
+    \item Play with compiler and linker magic.
+    \item Objectives:
+    \begin{itemize}
+      \item Reduce source code modification
+      \item Ease compilation process
+      \item Simplify the API
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Automatic stuff}
+  \begin{itemize}
+    \item Initialization and finalization by using the \emph{constructor} and
+    \emph{destructor} function attributes
+    \item On demand thread buffer creation by intercepting the
+    \texttt{pthread\_create} call at link time (details follow)
+    \item Flushing to a temporary, per thread, file when the event buffer is
+    full
+    \item Postprocess at the end of the execution, directly generating
+    \emph{Paraver}\textregistered{} traces
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{The linker trick}
+  \begin{itemize}
+    \item The \texttt{--wrap} option allows symbol redirection at link time.
+    \item Using \texttt{--wrap symbol} behaves like the following:
+    \begin{enumerate}
+      \item Undefined references to \texttt{symbol} are linked with
+      \texttt{\_\_wrap\_symbol} definitions
+      \item Undefined references to \texttt{\_\_real\_symbol} are linked with
+      \texttt{symbol} definitions
+    \end{enumerate}
+    \item This behaviour applies to all input objects
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Partial traces and post-processing}
+  \begin{itemize}
+    \item Each trace flushes to its own temporary file
+    \item Temporary files generated in \emph{/tmp} hoping the system
+    has a competent administrator
+    \item Each thread trace in binary format to reduce flush time:
+    \begin{itemize}
+      \item A single event uses 16 bytes:
+      \begin{itemize}
+        \item 8 byte timestamp
+        \item 4 byte event type
+        \item 4 byte event value
+      \end{itemize}
+      \item Memory buffer size specified in number of events
+    \end{itemize}
+    \item Upon finalization, all thread traces are merged in ascending timestamp
+    order
+      \begin{itemize}
+        \item Each thread trace is naturally sorted
+      \end{itemize}
+    \item ROW file automatically generated
+    \item PCF file automatically generated and customizable
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Final balance}
+  \begin{columns}[t]
+    \column{.49\textwidth}
+    Pros:
+    \begin{itemize}
+      \item Very simple to use, yet flexible enough
+      \item Small code base, easy to understand and hack
+      \begin{itemize}
+        \item $\approx 560$ effective lines of code, including scripts and build
+        system
+        \item Right now only \texttt{pthread\_create} is intercepted, but adding
+        more wrappers is very easy
+      \end{itemize}
+      \item Binary is instrumented in place, no load time dependencies
+      \item A friendly build environment, \emph{autocrap} free, is provided
+    \end{itemize}
+    \column{.49\textwidth}
+    Cons:
+    \begin{itemize}
+      \item Not so flexible, communication event API could be interesting
+      \item So much automation sometimes gets in the way
+      \begin{itemize}
+        \item The main thread execution is traced completely
+      \end{itemize}
+      \item Load time interception may enable more configuration possibilities
+      without recompilation (but not too many)
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\end{document}
+% vim:ft=tex

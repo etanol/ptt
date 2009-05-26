@@ -5,9 +5,15 @@
 report := manual.pdf
 report_input := manual.tex applications.tex framework.tex conclusions.tex
 
-all: $(report)
+all: $(report) slides.pdf
 
 $(report): $(report_input)
+
+
+
+.SUFFIXES:
+.SUFFIXES: .pdf .tex
+%.pdf: %.tex
 	@set -e ; \
 	echo '  PDFLaTeX  $<  [run 1]' ; \
 	pdflatex -halt-on-error -file-line-error $< >/dev/null ; \
